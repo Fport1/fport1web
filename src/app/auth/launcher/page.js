@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { useEffect, useState } from 'react'
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
 const S = `
   @keyframes fadeUp { from { opacity:0;transform:translateY(16px) } to { opacity:1;transform:translateY(0) } }
   @keyframes spin    { to { transform:rotate(360deg) } }
-  @keyframes pulse   { 0%,100%{opacity:.5}50%{opacity:1} }
+  @keyframes pulse   { 0%,100%{opacity:.4}50%{opacity:1} }
   .btn-google:hover:not(:disabled) { background:#1c1c28!important; border-color:#3f3f52!important; }
   .btn-google { transition:background .15s,border-color .15s; }
-  .btn-done:hover { filter:brightness(1.12); }
-  .btn-done { transition:filter .15s; }
 `
 
 function Spinner({ size = 18, color = '#a855f7' }) {
@@ -35,126 +33,130 @@ function GoogleLogo() {
   )
 }
 
-// Status: 'idle' | 'loading' | 'creating-token' | 'redirecting' | 'done' | 'error'
+// status: 'checking' | 'idle' | 'redirecting' | 'creating-token' | 'done' | 'error'
 export default function LauncherAuthPage() {
-  const [status, setStatus] = useState('idle')
+  const [status, setStatus] = useState('checking')
   const [error,  setError]  = useState('')
 
-  // Auto-trigger Google sign-in as soon as the page loads
+  // On page load, check if we're returning from a Google redirect
   useEffect(() => {
-    // Small delay so the page renders first
-    const t = setTimeout(() => handleGoogle(), 400)
-    return () => clearTimeout(t)
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result) {
+          // Not returning from redirect — show button
+          setStatus('idle')
+          return
+        }
+        // Got a credential — create custom token for the launcher
+        setStatus('creating-token')
+        const idToken = await result.user.getIdToken()
+        const res = await fetch('/api/auth/launcher-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        })
+        const data = await res.json()
+        if (data.error || !data.customToken) throw new Error(data.error || 'No se pudo crear el token')
+
+        setStatus('done')
+        // Redirect back to the launcher via deep link
+        window.location.href = `modpacklauncher://auth?token=${encodeURIComponent(data.customToken)}`
+      })
+      .catch((err) => {
+        setError(err.message || 'Ocurrió un error')
+        setStatus('error')
+      })
   }, [])
 
-  async function handleGoogle() {
+  function handleGoogle() {
     setError('')
-    setStatus('loading')
-    try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider())
-      setStatus('creating-token')
-
-      const idToken = await cred.user.getIdToken()
-      const res = await fetch('/api/auth/launcher-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      })
-      const data = await res.json()
-      if (data.error || !data.customToken) throw new Error(data.error || 'No se pudo crear el token')
-
-      setStatus('redirecting')
-      window.location.href = `modpacklauncher://auth?token=${encodeURIComponent(data.customToken)}`
-
-      // Fallback: if the redirect doesn't work immediately, show success after 1.5s
-      setTimeout(() => setStatus('done'), 1500)
-    } catch (err) {
-      if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
-        setStatus('idle')
-        return
-      }
-      setError(err.message || 'Ocurrió un error al autenticar')
-      setStatus('error')
-    }
+    setStatus('redirecting')
+    signInWithRedirect(auth, new GoogleAuthProvider())
   }
 
-  const labelMap = {
-    loading:        'Abriendo Google…',
-    'creating-token': 'Preparando sesión…',
-    redirecting:    'Abriendo launcher…',
-    done:           '¡Conectado!',
+  if (status === 'checking' || status === 'creating-token') {
+    return (
+      <>
+        <style>{S}</style>
+        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, background:'var(--bg)', padding:24 }}>
+          <Spinner size={32} />
+          <p style={{ fontSize:14, color:'var(--sub)', margin:0, animation:'pulse 1.5s ease infinite' }}>
+            {status === 'checking' ? 'Verificando sesión…' : 'Preparando acceso al launcher…'}
+          </p>
+        </div>
+      </>
+    )
   }
 
+  if (status === 'done') {
+    return (
+      <>
+        <style>{S}</style>
+        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'var(--bg)', padding:24 }}>
+          <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.3)', display:'flex', alignItems:'center', justifyContent:'center', animation:'fadeUp .3s ease both' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0, animation:'fadeUp .3s ease both .05s' }}>¡Cuenta conectada!</p>
+          <p style={{ fontSize:13, color:'var(--sub)', margin:0, textAlign:'center', maxWidth:280, animation:'fadeUp .3s ease both .1s' }}>
+            Puedes cerrar esta pestaña y volver al launcher.
+          </p>
+        </div>
+      </>
+    )
+  }
+
+  // status === 'idle' | 'redirecting' | 'error'
   return (
     <>
       <style>{S}</style>
-      <div style={{
-        minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-        padding:24, background:'var(--bg)', paddingTop:88,
-      }}>
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'var(--bg)', paddingTop:88 }}>
         <div style={{ width:'100%', maxWidth:400, animation:'fadeUp .35s ease both' }}>
 
-          {/* Logo chip */}
           <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 8px' }}>
             fport1-social
           </p>
-
           <h1 style={{ fontSize:26, fontWeight:700, margin:'0 0 8px', color:'var(--text)' }}>
-            {status === 'done' ? '¡Cuenta conectada!' : 'Conectar con Google'}
+            Conectar con Google
           </h1>
-
           <p style={{ color:'var(--sub)', fontSize:14, margin:'0 0 32px', lineHeight:1.5 }}>
-            {status === 'done'
-              ? 'Ya puedes cerrar esta ventana y volver al launcher.'
-              : 'Inicia sesión con tu cuenta de Google para usar fport1-social dentro del launcher de Minecraft.'}
+            Inicia sesión con tu cuenta de Google para usar fport1-social dentro del launcher de Minecraft.
           </p>
 
-          {status === 'done' ? (
-            <div style={{ borderRadius:14, border:'1px solid rgba(74,222,128,.3)', background:'rgba(74,222,128,.07)', padding:'18px 20px', display:'flex', alignItems:'center', gap:12, animation:'fadeUp .3s ease both' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <p style={{ fontSize:14, color:'#4ade80', fontWeight:500, margin:0 }}>
-                Sesión iniciada. Puedes cerrar esta pestaña.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Google button */}
-              <button
-                onClick={handleGoogle}
-                disabled={status !== 'idle' && status !== 'error'}
-                className="btn-google"
-                style={{
-                  width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
-                  gap:10, padding:'13px 18px', border:'1px solid var(--border)',
-                  borderRadius:12, background:'var(--card)', color:'var(--text)',
-                  fontSize:15, fontWeight:500, cursor: (status !== 'idle' && status !== 'error') ? 'wait' : 'pointer',
-                  opacity: (status !== 'idle' && status !== 'error') ? .7 : 1,
-                  transition:'opacity .2s',
-                }}
-              >
-                {status === 'idle' || status === 'error' ? (
-                  <><GoogleLogo /> Continuar con Google</>
-                ) : (
-                  <><Spinner size={18} /> {labelMap[status] ?? 'Procesando…'}</>
-                )}
+          <button
+            onClick={handleGoogle}
+            disabled={status === 'redirecting'}
+            className="btn-google"
+            style={{
+              width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
+              gap:10, padding:'13px 18px', border:'1px solid var(--border)',
+              borderRadius:12, background:'var(--card)', color:'var(--text)',
+              fontSize:15, fontWeight:500,
+              cursor: status === 'redirecting' ? 'wait' : 'pointer',
+              opacity: status === 'redirecting' ? .7 : 1,
+              transition:'opacity .2s',
+            }}
+          >
+            {status === 'redirecting'
+              ? <><Spinner size={18} color="var(--sub)" /> Redirigiendo a Google…</>
+              : <><GoogleLogo /> Continuar con Google</>
+            }
+          </button>
+
+          {status === 'error' && error && (
+            <div style={{ marginTop:16, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'10px 14px', color:'#f87171', fontSize:13, animation:'fadeUp .2s ease both' }}>
+              {error}
+              <button onClick={handleGoogle} style={{ display:'block', marginTop:8, background:'none', border:'none', color:'#f87171', textDecoration:'underline', cursor:'pointer', fontSize:13, padding:0 }}>
+                Intentar de nuevo
               </button>
+            </div>
+          )}
 
-              {/* Explanation */}
-              {(status === 'idle' || status === 'error') && (
-                <p style={{ fontSize:12, color:'var(--muted)', marginTop:14, lineHeight:1.6, animation:'fadeUp .25s ease both' }}>
-                  Al continuar, se abrirá un popup de Google. Tras autenticarte, serás redirigido automáticamente al launcher.
-                </p>
-              )}
-
-              {/* Error */}
-              {status === 'error' && error && (
-                <div style={{ marginTop:12, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'10px 14px', color:'#f87171', fontSize:13, animation:'fadeUp .2s ease both' }}>
-                  {error}
-                </div>
-              )}
-            </>
+          {status === 'idle' && (
+            <p style={{ fontSize:12, color:'var(--muted)', marginTop:14, lineHeight:1.6 }}>
+              Al hacer clic serás redirigido a Google. Tras autenticarte, volverás aquí y el launcher se abrirá automáticamente.
+            </p>
           )}
         </div>
       </div>
