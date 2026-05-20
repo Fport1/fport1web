@@ -1,28 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
-import { reserveUsernameAndUpsertProfile, validateHandle, normalizeHandle, USERNAME_MIN, USERNAME_MAX, DISPLAY_NAME_MAX } from '@/lib/username'
+import {
+  reserveUsernameAndUpsertProfile,
+  validateHandle,
+  normalizeHandle,
+  USERNAME_MIN,
+  USERNAME_MAX,
+  DISPLAY_NAME_MAX,
+} from '@/lib/username'
 
 const S = `@keyframes spin { to { transform:rotate(360deg) } }`
 
 function TinySpinner() {
   return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid #facc15', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
-}
-
-function Field({ label, children }) {
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-      <label style={{ fontSize:13, color:'var(--sub)', fontWeight:500 }}>{label}</label>
-      {children}
-    </div>
-  )
-}
-
-function Hint({ color, children }) {
-  return <span style={{ fontSize:12, color }}>{children}</span>
 }
 
 const borderColor = { idle:'var(--border)', ok:'rgba(74,222,128,.5)', error:'rgba(239,68,68,.6)', checking:'rgba(250,204,21,.5)' }
@@ -34,12 +28,18 @@ function inputStyle(state = 'idle') {
   }
 }
 
-export default function CompletarRegistro() {
-  const router       = useRouter()
-  const searchParams = useSearchParams()
-  const uid          = searchParams.get('uid')
+function Field({ label, children }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+      <label style={{ fontSize:13, color:'var(--sub)', fontWeight:500 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
 
-  const [user,    setUser]    = useState(null)   // Firebase user
+function CompletarForm() {
+  const router       = useRouter()
+  const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [form,    setForm]    = useState({ profileName:'', handle:'' })
   const [touched, setTouched] = useState({ profileName:false, handle:false })
@@ -50,12 +50,11 @@ export default function CompletarRegistro() {
   const up    = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const touch = (k)    => setTouched(t => ({ ...t, [k]: true }))
 
-  // Get authenticated user
   useEffect(() => {
+    if (!auth) { router.push('/login'); return }
     const unsub = auth.onAuthStateChanged(u => {
       if (!u) { router.push('/login'); return }
       setUser(u)
-      // Pre-fill display name from Google
       if (u.displayName) up('profileName', u.displayName)
       setLoading(false)
     })
@@ -65,8 +64,8 @@ export default function CompletarRegistro() {
   const handleCheck = useMemo(() => validateHandle(form.handle), [form.handle])
   const handleSynOk = handleCheck.ok
   const profileOk   = form.profileName.trim().length >= 2
+  const canSubmit   = profileOk && handleSynOk && handleStatus === 'available' && !submitting
 
-  // Handle availability check
   useEffect(() => {
     let cancel = false
     const norm = normalizeHandle(form.handle)
@@ -81,8 +80,6 @@ export default function CompletarRegistro() {
     }, 450)
     return () => { cancel = true; clearTimeout(t) }
   }, [form.handle, handleSynOk])
-
-  const canSubmit = profileOk && handleSynOk && handleStatus === 'available' && !submitting
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -106,7 +103,7 @@ export default function CompletarRegistro() {
 
   if (loading) {
     return (
-      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' }}>
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
         <style>{S}</style>
         <svg style={{ animation:'spin .7s linear infinite', width:28, height:28 }} viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
           <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".2"/><path d="M21 12a9 9 0 00-9-9"/>
@@ -136,7 +133,7 @@ export default function CompletarRegistro() {
               value={form.profileName} onChange={e => up('profileName', e.target.value)}
               onBlur={() => touch('profileName')} maxLength={DISPLAY_NAME_MAX}
               style={inputStyle(touched.profileName && !profileOk ? 'error' : 'idle')} />
-            {touched.profileName && !profileOk && <Hint color="#f87171">Mínimo 2 caracteres.</Hint>}
+            {touched.profileName && !profileOk && <span style={{ fontSize:12, color:'#f87171' }}>Mínimo 2 caracteres.</span>}
           </Field>
 
           <Field label="Usuario">
@@ -147,11 +144,11 @@ export default function CompletarRegistro() {
                 onBlur={() => touch('handle')} maxLength={USERNAME_MAX}
                 style={{ ...inputStyle(handleState()), flex:1 }} />
             </div>
-            {handleStatus === 'checking' && <Hint color="#facc15"><TinySpinner />Comprobando…</Hint>}
-            {handleStatus === 'available' && handleSynOk && <Hint color="#4ade80">Disponible ✓</Hint>}
-            {handleStatus === 'taken' && <Hint color="#f87171">Ese usuario ya está en uso.</Hint>}
-            {touched.handle && !handleSynOk && handleCheck.msg && <Hint color="#f87171">{handleCheck.msg}</Hint>}
-            <Hint color="var(--muted)">Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</Hint>
+            {handleStatus === 'checking' && <span style={{ fontSize:12, color:'#facc15' }}><TinySpinner />Comprobando…</span>}
+            {handleStatus === 'available' && handleSynOk && <span style={{ fontSize:12, color:'#4ade80' }}>Disponible ✓</span>}
+            {handleStatus === 'taken' && <span style={{ fontSize:12, color:'#f87171' }}>Ese usuario ya está en uso.</span>}
+            {touched.handle && !handleSynOk && handleCheck.msg && <span style={{ fontSize:12, color:'#f87171' }}>{handleCheck.msg}</span>}
+            <span style={{ fontSize:12, color:'var(--muted)' }}>Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</span>
           </Field>
 
           {serverError && (
@@ -172,5 +169,20 @@ export default function CompletarRegistro() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function CompletarRegistro() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <style>{S}</style>
+        <svg style={{ animation:'spin .7s linear infinite', width:28, height:28 }} viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+          <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".2"/><path d="M21 12a9 9 0 00-9-9"/>
+        </svg>
+      </div>
+    }>
+      <CompletarForm />
+    </Suspense>
   )
 }
