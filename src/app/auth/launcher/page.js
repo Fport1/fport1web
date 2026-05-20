@@ -1,18 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+} from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase'
+import {
+  reserveUsernameAndUpsertProfile,
+  validateHandle,
+  normalizeHandle,
+  USERNAME_MIN,
+  USERNAME_MAX,
+  DISPLAY_NAME_MAX,
+} from '@/lib/username'
 
+// ── Styles ─────────────────────────────────────────────────────────────────────
 const S = `
-  @keyframes fadeUp { from { opacity:0;transform:translateY(16px) } to { opacity:1;transform:translateY(0) } }
-  @keyframes spin    { to { transform:rotate(360deg) } }
-  @keyframes pulse   { 0%,100%{opacity:.4}50%{opacity:1} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes spin    { to{transform:rotate(360deg)} }
+  @keyframes pulse   { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .btn-primary:hover:not(:disabled) { filter:brightness(1.1); }
+  .btn-primary:active:not(:disabled){ transform:scale(.98); }
+  .btn-primary { transition:filter .15s,transform .1s; }
   .btn-google:hover:not(:disabled) { background:#1c1c28!important; border-color:#3f3f52!important; }
   .btn-google { transition:background .15s,border-color .15s; }
+  .f1-input:focus { box-shadow:0 0 0 3px rgba(124,58,237,.18)!important; outline:none; }
+  .f1-input { transition:border-color .2s,box-shadow .2s; }
 `
 
-function Spinner({ size = 18, color = '#a855f7' }) {
+// ── Tiny helpers ───────────────────────────────────────────────────────────────
+function Spinner({ size = 20, color = '#a855f7' }) {
   return (
     <svg style={{ animation:'spin .7s linear infinite', width:size, height:size, flexShrink:0 }}
       viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
@@ -20,6 +40,10 @@ function Spinner({ size = 18, color = '#a855f7' }) {
       <path d="M21 12a9 9 0 00-9-9"/>
     </svg>
   )
+}
+
+function TinySpinner() {
+  return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid #facc15', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
 }
 
 function GoogleLogo() {
@@ -33,33 +57,143 @@ function GoogleLogo() {
   )
 }
 
+function Field({ label, children }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+      <label style={{ fontSize:13, color:'var(--sub)', fontWeight:500 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+const borderColor = { idle:'var(--border)', ok:'rgba(74,222,128,.5)', error:'rgba(239,68,68,.6)', checking:'rgba(250,204,21,.5)' }
+function inp(state = 'idle') {
+  return { padding:'11px 14px', borderRadius:10, border:`1px solid ${borderColor[state]}`, background:'var(--card)', color:'var(--text)', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box' }
+}
+
+// ── Profile completion form (shown when Google user has no @handle yet) ─────────
+function ProfileForm({ user, onDone }) {
+  const [form,    setForm]   = useState({ profileName: user.displayName ?? '', handle: '' })
+  const [touched, setTouched]= useState({ profileName:false, handle:false })
+  const [handleStatus, setHS]= useState('idle')
+  const [err,    setErr]     = useState('')
+  const [loading,setLoading] = useState(false)
+
+  const up    = (k,v) => setForm(f=>({...f,[k]:v}))
+  const touch = (k)   => setTouched(t=>({...t,[k]:true}))
+
+  const hc       = useMemo(() => validateHandle(form.handle), [form.handle])
+  const profileOk= form.profileName.trim().length >= 2
+  const canSubmit= profileOk && hc.ok && handleStatus === 'available' && !loading
+
+  useEffect(() => {
+    let cancel = false
+    const norm = normalizeHandle(form.handle)
+    if (!norm)  { setHS('idle');    return }
+    if (!hc.ok) { setHS('invalid'); return }
+    setHS('checking')
+    const t = setTimeout(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'usernames', norm))
+        if (!cancel) setHS(snap.exists() ? 'taken' : 'available')
+      } catch { if (!cancel) setHS('error') }
+    }, 450)
+    return () => { cancel=true; clearTimeout(t) }
+  }, [form.handle, hc.ok])
+
+  async function submit(e) {
+    e.preventDefault()
+    setTouched({ profileName:true, handle:true })
+    if (!canSubmit) return
+    setLoading(true); setErr('')
+    try {
+      await reserveUsernameAndUpsertProfile({
+        uid:         user.uid,
+        email:       user.email ?? '',
+        profileName: form.profileName.trim(),
+        handleInput: form.handle,
+        minecraftUsername: null,
+        minecraftUUID:     null,
+      })
+      onDone()
+    } catch(ex) { setErr(ex.message ?? 'Error al guardar el perfil.') }
+    finally { setLoading(false) }
+  }
+
+  const hState = () =>
+    handleStatus==='checking' ? 'checking' :
+    (handleStatus==='available'&&hc.ok) ? 'ok' :
+    (touched.handle&&(!hc.ok||handleStatus==='taken')) ? 'error' : 'idle'
+
+  return (
+    <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14, animation:'fadeUp .3s ease both' }}>
+      <Field label="Nombre de perfil">
+        <input type="text" className="f1-input"
+          placeholder="Cómo quieres que te vean (apodo, alias…)"
+          value={form.profileName} onChange={e=>up('profileName',e.target.value)}
+          onBlur={()=>touch('profileName')} maxLength={DISPLAY_NAME_MAX}
+          style={inp(touched.profileName&&!profileOk?'error':'idle')} />
+        {touched.profileName&&!profileOk && <span style={{fontSize:12,color:'#f87171'}}>Mínimo 2 caracteres.</span>}
+      </Field>
+
+      <Field label="Usuario">
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ color:'var(--sub)', fontSize:14 }}>@</span>
+          <input type="text" className="f1-input"
+            placeholder="tu_usuario"
+            value={form.handle} onChange={e=>up('handle',normalizeHandle(e.target.value))}
+            onBlur={()=>touch('handle')} maxLength={USERNAME_MAX}
+            style={{...inp(hState()),flex:1}} />
+        </div>
+        {handleStatus==='checking' && <span style={{fontSize:12,color:'#facc15'}}><TinySpinner/>Comprobando…</span>}
+        {handleStatus==='available'&&hc.ok && <span style={{fontSize:12,color:'#4ade80'}}>Disponible ✓</span>}
+        {handleStatus==='taken' && <span style={{fontSize:12,color:'#f87171'}}>Ese usuario ya está en uso.</span>}
+        {touched.handle&&!hc.ok&&hc.msg && <span style={{fontSize:12,color:'#f87171'}}>{hc.msg}</span>}
+        <span style={{fontSize:12,color:'var(--muted)'}}>Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</span>
+      </Field>
+
+      {err && <div style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',color:'#f87171',fontSize:13}}>{err}</div>}
+
+      <button type="submit" disabled={!canSubmit} className="btn-primary" style={{
+        padding:'12px', borderRadius:10, border:'none', fontSize:14, fontWeight:600,
+        cursor:canSubmit?'pointer':'not-allowed',
+        background:canSubmit?'var(--accent)':'var(--card)',
+        color:canSubmit?'#fff':'var(--muted)',
+        transition:'background .2s',
+      }}>
+        {loading ? 'Guardando…' : 'Continuar →'}
+      </button>
+    </form>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+// States: checking | idle | redirecting | profile-needed | ready | done | error
+
 export default function LauncherAuthPage() {
-  const [status, setStatus] = useState('checking') // checking | idle | redirecting | sending | done | error
-  const [error,  setError]  = useState('')
+  const [status,     setStatus]    = useState('checking')
+  const [error,      setError]     = useState('')
+  const [credential, setCredential]= useState(null)   // GoogleAuthProvider OAuthCredential
+  const [firebaseUser, setFbUser]  = useState(null)
 
   useEffect(() => {
     getRedirectResult(auth)
       .then(async (result) => {
         if (!result) { setStatus('idle'); return }
 
-        // Get the Google credential (idToken + accessToken) — no server needed
-        const credential = GoogleAuthProvider.credentialFromResult(result)
-        if (!credential?.idToken) throw new Error('No se pudo obtener las credenciales de Google.')
+        const cred = GoogleAuthProvider.credentialFromResult(result)
+        if (!cred?.idToken) throw new Error('No se pudo obtener las credenciales de Google.')
 
-        setStatus('sending')
+        setCredential(cred)
+        setFbUser(result.user)
 
-        // Send tokens to the launcher via deep link
-        const params = new URLSearchParams({
-          idToken:     credential.idToken,
-          accessToken: credential.accessToken ?? '',
-          displayName: result.user.displayName ?? '',
-          email:       result.user.email ?? '',
-          photoURL:    result.user.photoURL ?? '',
-        })
-        window.location.href = `modpacklauncher://auth?${params.toString()}`
-
-        // Show success after short delay (in case deep link opened without leaving page)
-        setTimeout(() => setStatus('done'), 800)
+        // Check if user already has a profile in Firestore
+        const snap = await getDoc(doc(db, 'users', result.user.uid))
+        if (snap.exists() && snap.data().usernameSlug) {
+          setStatus('ready')   // profile complete → just open launcher
+        } else {
+          setStatus('profile-needed')  // new user → needs to pick @handle
+        }
       })
       .catch((err) => {
         setError(err.message || 'Ocurrió un error')
@@ -73,90 +207,149 @@ export default function LauncherAuthPage() {
     signInWithRedirect(auth, new GoogleAuthProvider())
   }
 
-  // Loading states
-  if (status === 'checking' || status === 'sending') {
+  function openLauncher() {
+    if (!credential?.idToken) return
+    const params = new URLSearchParams({
+      idToken:     credential.idToken,
+      accessToken: credential.accessToken ?? '',
+    })
+    window.location.href = `modpacklauncher://auth?${params.toString()}`
+    setStatus('done')
+  }
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+  if (status === 'checking' || status === 'redirecting') {
     return (
       <>
         <style>{S}</style>
-        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, background:'var(--bg)', padding:24 }}>
+        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, background:'var(--bg)' }}>
           <Spinner size={32} />
           <p style={{ fontSize:14, color:'var(--sub)', margin:0, animation:'pulse 1.5s ease infinite' }}>
-            {status === 'checking' ? 'Verificando sesión…' : 'Abriendo el launcher…'}
+            {status === 'checking' ? 'Verificando sesión…' : 'Redirigiendo a Google…'}
           </p>
         </div>
       </>
     )
   }
 
+  // ── Profile completion ─────────────────────────────────────────────────────
+  if (status === 'profile-needed') {
+    return (
+      <>
+        <style>{S}</style>
+        <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, paddingTop:88, background:'var(--bg)' }}>
+          <div style={{ width:'100%', maxWidth:440, animation:'fadeUp .3s ease both' }}>
+            <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 6px' }}>fport1-social</p>
+            <h1 style={{ fontSize:24, fontWeight:700, margin:'0 0 6px', color:'var(--text)' }}>Completa tu perfil</h1>
+            <p style={{ color:'var(--sub)', fontSize:14, margin:'0 0 24px' }}>
+              Elige un nombre y @usuario únicos para tu cuenta de fport1-social.
+            </p>
+            <ProfileForm user={firebaseUser} onDone={() => setStatus('ready')} />
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── Ready to open launcher ─────────────────────────────────────────────────
+  if (status === 'ready') {
+    return (
+      <>
+        <style>{S}</style>
+        <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'var(--bg)' }}>
+          <div style={{ width:'100%', maxWidth:400, textAlign:'center', animation:'fadeUp .3s ease both' }}>
+            <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(124,58,237,.12)', border:'1px solid rgba(124,58,237,.3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 8px' }}>fport1-social</p>
+            <h1 style={{ fontSize:22, fontWeight:700, margin:'0 0 8px', color:'var(--text)' }}>¡Todo listo!</h1>
+            <p style={{ color:'var(--sub)', fontSize:14, margin:'0 0 28px' }}>
+              Tu cuenta está configurada. Haz clic para abrir el launcher.
+            </p>
+            <button onClick={openLauncher} className="btn-primary" style={{
+              width:'100%', padding:'13px', borderRadius:12, border:'none',
+              background:'linear-gradient(135deg,var(--accent),#6d28d9)',
+              color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer',
+            }}>
+              Abrir en el launcher →
+            </button>
+            <p style={{ fontSize:12, color:'var(--muted)', marginTop:12 }}>
+              El navegador pedirá permiso para abrir la aplicación. Haz clic en "Abrir".
+            </p>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── Done ───────────────────────────────────────────────────────────────────
   if (status === 'done') {
     return (
       <>
         <style>{S}</style>
-        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'var(--bg)', padding:24 }}>
+        <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'var(--bg)' }}>
           <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0 }}>¡Cuenta conectada!</p>
-          <p style={{ fontSize:13, color:'var(--sub)', margin:0, textAlign:'center', maxWidth:280 }}>
-            Puedes cerrar esta pestaña y volver al launcher.
-          </p>
+          <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0 }}>¡Abierto en el launcher!</p>
+          <p style={{ fontSize:13, color:'var(--sub)', margin:0 }}>Puedes cerrar esta pestaña.</p>
+          <button onClick={openLauncher} style={{ marginTop:8, background:'none', border:'none', color:'var(--muted)', fontSize:12, cursor:'pointer', textDecoration:'underline' }}>
+            No se abrió — intentar de nuevo
+          </button>
         </div>
       </>
     )
   }
 
-  // idle | redirecting | error
+  // ── Error ──────────────────────────────────────────────────────────────────
+  if (status === 'error') {
+    return (
+      <>
+        <style>{S}</style>
+        <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'var(--bg)' }}>
+          <div style={{ width:'100%', maxWidth:400, animation:'fadeUp .3s ease both' }}>
+            <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 6px' }}>fport1-social</p>
+            <h1 style={{ fontSize:22, fontWeight:700, margin:'0 0 16px', color:'var(--text)' }}>Conectar con Google</h1>
+            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'12px 16px', color:'#f87171', fontSize:13, marginBottom:18 }}>
+              {error}
+            </div>
+            <button onClick={handleGoogle} className="btn-google" style={{
+              width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
+              gap:10, padding:'13px', border:'1px solid var(--border)', borderRadius:12,
+              background:'var(--card)', color:'var(--text)', fontSize:14, fontWeight:500, cursor:'pointer',
+            }}>
+              <GoogleLogo /> Intentar de nuevo
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── Idle (initial — button to start Google auth) ───────────────────────────
   return (
     <>
       <style>{S}</style>
       <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'var(--bg)', paddingTop:88 }}>
         <div style={{ width:'100%', maxWidth:400, animation:'fadeUp .35s ease both' }}>
-          <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 8px' }}>
-            fport1-social
-          </p>
-          <h1 style={{ fontSize:26, fontWeight:700, margin:'0 0 8px', color:'var(--text)' }}>
-            Conectar con Google
-          </h1>
+          <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 8px' }}>fport1-social</p>
+          <h1 style={{ fontSize:26, fontWeight:700, margin:'0 0 8px', color:'var(--text)' }}>Conectar con Google</h1>
           <p style={{ color:'var(--sub)', fontSize:14, margin:'0 0 32px', lineHeight:1.5 }}>
-            Inicia sesión con tu cuenta de Google para usar fport1-social dentro del launcher de Minecraft.
+            Inicia sesión con tu cuenta de Google para usar fport1-social dentro del launcher.
           </p>
-
-          <button
-            onClick={handleGoogle}
-            disabled={status === 'redirecting'}
-            className="btn-google"
-            style={{
-              width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
-              gap:10, padding:'13px 18px', border:'1px solid var(--border)',
-              borderRadius:12, background:'var(--card)', color:'var(--text)',
-              fontSize:15, fontWeight:500,
-              cursor: status === 'redirecting' ? 'wait' : 'pointer',
-              opacity: status === 'redirecting' ? .7 : 1,
-              transition:'opacity .2s',
-            }}
-          >
-            {status === 'redirecting'
-              ? <><Spinner size={18} color="var(--sub)" /> Redirigiendo a Google…</>
-              : <><GoogleLogo /> Continuar con Google</>
-            }
+          <button onClick={handleGoogle} className="btn-google" style={{
+            width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
+            gap:10, padding:'13px 18px', border:'1px solid var(--border)',
+            borderRadius:12, background:'var(--card)', color:'var(--text)',
+            fontSize:15, fontWeight:500, cursor:'pointer',
+          }}>
+            <GoogleLogo /> Continuar con Google
           </button>
-
-          {status === 'error' && (
-            <div style={{ marginTop:16, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'10px 14px', color:'#f87171', fontSize:13 }}>
-              {error}
-              <button onClick={handleGoogle} style={{ display:'block', marginTop:8, background:'none', border:'none', color:'#f87171', textDecoration:'underline', cursor:'pointer', fontSize:13, padding:0 }}>
-                Intentar de nuevo
-              </button>
-            </div>
-          )}
-
-          {(status === 'idle') && (
-            <p style={{ fontSize:12, color:'var(--muted)', marginTop:14, lineHeight:1.6 }}>
-              Al hacer clic serás redirigido a Google. Tras autenticarte, el launcher se abrirá automáticamente.
-            </p>
-          )}
+          <p style={{ fontSize:12, color:'var(--muted)', marginTop:14, lineHeight:1.6 }}>
+            Serás redirigido a Google. Tras autenticarte, volverás aquí y el launcher se abrirá automáticamente.
+          </p>
         </div>
       </div>
     </>
