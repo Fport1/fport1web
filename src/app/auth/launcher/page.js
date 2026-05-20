@@ -33,34 +33,33 @@ function GoogleLogo() {
   )
 }
 
-// status: 'checking' | 'idle' | 'redirecting' | 'creating-token' | 'done' | 'error'
 export default function LauncherAuthPage() {
-  const [status, setStatus] = useState('checking')
+  const [status, setStatus] = useState('checking') // checking | idle | redirecting | sending | done | error
   const [error,  setError]  = useState('')
 
-  // On page load, check if we're returning from a Google redirect
   useEffect(() => {
     getRedirectResult(auth)
       .then(async (result) => {
-        if (!result) {
-          // Not returning from redirect — show button
-          setStatus('idle')
-          return
-        }
-        // Got a credential — create custom token for the launcher
-        setStatus('creating-token')
-        const idToken = await result.user.getIdToken()
-        const res = await fetch('/api/auth/launcher-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        })
-        const data = await res.json()
-        if (data.error || !data.customToken) throw new Error(data.error || 'No se pudo crear el token')
+        if (!result) { setStatus('idle'); return }
 
-        setStatus('done')
-        // Redirect back to the launcher via deep link
-        window.location.href = `modpacklauncher://auth?token=${encodeURIComponent(data.customToken)}`
+        // Get the Google credential (idToken + accessToken) — no server needed
+        const credential = GoogleAuthProvider.credentialFromResult(result)
+        if (!credential?.idToken) throw new Error('No se pudo obtener las credenciales de Google.')
+
+        setStatus('sending')
+
+        // Send tokens to the launcher via deep link
+        const params = new URLSearchParams({
+          idToken:     credential.idToken,
+          accessToken: credential.accessToken ?? '',
+          displayName: result.user.displayName ?? '',
+          email:       result.user.email ?? '',
+          photoURL:    result.user.photoURL ?? '',
+        })
+        window.location.href = `modpacklauncher://auth?${params.toString()}`
+
+        // Show success after short delay (in case deep link opened without leaving page)
+        setTimeout(() => setStatus('done'), 800)
       })
       .catch((err) => {
         setError(err.message || 'Ocurrió un error')
@@ -74,14 +73,15 @@ export default function LauncherAuthPage() {
     signInWithRedirect(auth, new GoogleAuthProvider())
   }
 
-  if (status === 'checking' || status === 'creating-token') {
+  // Loading states
+  if (status === 'checking' || status === 'sending') {
     return (
       <>
         <style>{S}</style>
         <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, background:'var(--bg)', padding:24 }}>
           <Spinner size={32} />
           <p style={{ fontSize:14, color:'var(--sub)', margin:0, animation:'pulse 1.5s ease infinite' }}>
-            {status === 'checking' ? 'Verificando sesión…' : 'Preparando acceso al launcher…'}
+            {status === 'checking' ? 'Verificando sesión…' : 'Abriendo el launcher…'}
           </p>
         </div>
       </>
@@ -93,13 +93,13 @@ export default function LauncherAuthPage() {
       <>
         <style>{S}</style>
         <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'var(--bg)', padding:24 }}>
-          <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.3)', display:'flex', alignItems:'center', justifyContent:'center', animation:'fadeUp .3s ease both' }}>
+          <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0, animation:'fadeUp .3s ease both .05s' }}>¡Cuenta conectada!</p>
-          <p style={{ fontSize:13, color:'var(--sub)', margin:0, textAlign:'center', maxWidth:280, animation:'fadeUp .3s ease both .1s' }}>
+          <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0 }}>¡Cuenta conectada!</p>
+          <p style={{ fontSize:13, color:'var(--sub)', margin:0, textAlign:'center', maxWidth:280 }}>
             Puedes cerrar esta pestaña y volver al launcher.
           </p>
         </div>
@@ -107,13 +107,12 @@ export default function LauncherAuthPage() {
     )
   }
 
-  // status === 'idle' | 'redirecting' | 'error'
+  // idle | redirecting | error
   return (
     <>
       <style>{S}</style>
       <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'var(--bg)', paddingTop:88 }}>
         <div style={{ width:'100%', maxWidth:400, animation:'fadeUp .35s ease both' }}>
-
           <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 8px' }}>
             fport1-social
           </p>
@@ -144,8 +143,8 @@ export default function LauncherAuthPage() {
             }
           </button>
 
-          {status === 'error' && error && (
-            <div style={{ marginTop:16, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'10px 14px', color:'#f87171', fontSize:13, animation:'fadeUp .2s ease both' }}>
+          {status === 'error' && (
+            <div style={{ marginTop:16, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'10px 14px', color:'#f87171', fontSize:13 }}>
               {error}
               <button onClick={handleGoogle} style={{ display:'block', marginTop:8, background:'none', border:'none', color:'#f87171', textDecoration:'underline', cursor:'pointer', fontSize:13, padding:0 }}>
                 Intentar de nuevo
@@ -153,9 +152,9 @@ export default function LauncherAuthPage() {
             </div>
           )}
 
-          {status === 'idle' && (
+          {(status === 'idle') && (
             <p style={{ fontSize:12, color:'var(--muted)', marginTop:14, lineHeight:1.6 }}>
-              Al hacer clic serás redirigido a Google. Tras autenticarte, volverás aquí y el launcher se abrirá automáticamente.
+              Al hacer clic serás redirigido a Google. Tras autenticarte, el launcher se abrirá automáticamente.
             </p>
           )}
         </div>
