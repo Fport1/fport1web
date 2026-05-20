@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   updateProfile,
   deleteUser,
 } from 'firebase/auth'
@@ -21,6 +22,8 @@ import {
   USERNAME_MAX,
   DISPLAY_NAME_MAX,
 } from '@/lib/username'
+
+const S = `@keyframes spin { to { transform: rotate(360deg) } }`
 
 function TinySpinner() {
   return (
@@ -45,7 +48,7 @@ function EyeIcon({ open }) {
   )
 }
 
-export default function RegisterPage() {
+function RegisterPage() {
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -64,76 +67,95 @@ export default function RegisterPage() {
   const [show1, setShow1] = useState(false)
   const [show2, setShow2] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [serverError, setServerError] = useState('')
 
   // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'error'
-  const [emailStatus, setEmailStatus] = useState('idle')
+  const [emailStatus, setEmailStatus]   = useState('idle')
   const [handleStatus, setHandleStatus] = useState('idle')
 
   const update = (field, value) => setForm(f => ({ ...f, [field]: value }))
-  const touch = (field) => setTouched(t => ({ ...t, [field]: true }))
+  const touch  = (field) => setTouched(t => ({ ...t, [field]: true }))
 
-  const emailNorm = form.email.trim().toLowerCase()
-  const emailFormatOk = /\S+@\S+\.\S+/.test(emailNorm)
-  const passLenOk = form.pass.length >= 8
-  const passMatch = form.pass === form.pass2
+  // Handle redirect result from Google sign-in
+  useEffect(() => {
+    setGoogleLoading(true)
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result) return
+        // Check if user already has a profile
+        const snap = await getDoc(doc(db, 'users', result.user.uid))
+        if (snap.exists() && snap.data().usernameSlug) {
+          router.push('/amigos')
+        } else {
+          router.push('/registro/completar')
+        }
+      })
+      .catch((err) => {
+        if (err.code !== 'auth/cancelled-popup-request') {
+          setServerError(friendlyError(err.code))
+        }
+      })
+      .finally(() => setGoogleLoading(false))
+  }, [])
+
+  const emailNorm      = form.email.trim().toLowerCase()
+  const emailFormatOk  = /\S+@\S+\.\S+/.test(emailNorm)
+  const passLenOk      = form.pass.length >= 8
+  const passMatch      = form.pass === form.pass2
   const showPassMismatch = form.pass.length > 0 && form.pass2.length > 0 && !passMatch
-  const profileNameOk = form.profileName.trim().length >= 2
-  const aceptaOk = form.acepta === true
+  const profileNameOk  = form.profileName.trim().length >= 2
+  const aceptaOk       = form.acepta === true
 
-  const handleCheck = useMemo(() => validateHandle(form.handle), [form.handle])
-  const handleSyntaxOk = handleCheck.ok
+  const handleCheck     = useMemo(() => validateHandle(form.handle), [form.handle])
+  const handleSyntaxOk  = handleCheck.ok
 
   // Email availability
   useEffect(() => {
     let cancel = false
-    async function check() {
-      if (!emailNorm) { setEmailStatus('idle'); return }
-      if (!emailFormatOk) { setEmailStatus('invalid'); return }
-      setEmailStatus('checking')
+    if (!emailNorm)     { setEmailStatus('idle'); return }
+    if (!emailFormatOk) { setEmailStatus('invalid'); return }
+    setEmailStatus('checking')
+    const t = setTimeout(async () => {
       try {
         const methods = await fetchSignInMethodsForEmail(auth, emailNorm)
         if (!cancel) setEmailStatus(methods.length > 0 ? 'taken' : 'available')
       } catch {
-        if (!cancel) setEmailStatus('error')
+        if (!cancel) setEmailStatus('available') // deprecated API — fall through to server check
       }
-    }
-    const t = setTimeout(check, 500)
+    }, 500)
     return () => { cancel = true; clearTimeout(t) }
   }, [emailNorm, emailFormatOk])
 
   // Handle availability
   useEffect(() => {
     let cancel = false
-    async function check() {
-      const norm = normalizeHandle(form.handle)
-      if (!norm) { setHandleStatus('idle'); return }
-      if (!handleSyntaxOk) { setHandleStatus('invalid'); return }
-      setHandleStatus('checking')
+    const norm = normalizeHandle(form.handle)
+    if (!norm)           { setHandleStatus('idle');    return }
+    if (!handleSyntaxOk) { setHandleStatus('invalid'); return }
+    setHandleStatus('checking')
+    const t = setTimeout(async () => {
       try {
         const snap = await getDoc(doc(db, 'usernames', norm))
         if (!cancel) setHandleStatus(snap.exists() ? 'taken' : 'available')
       } catch {
-        if (!cancel) setHandleStatus('error')
+        // Firestore rules may block unauthenticated reads — server validates duplicates
+        if (!cancel) setHandleStatus('unchecked')
       }
-    }
-    const t = setTimeout(check, 450)
+    }, 450)
     return () => { cancel = true; clearTimeout(t) }
   }, [form.handle, handleSyntaxOk])
 
-  const canSubmit = profileNameOk && handleSyntaxOk && handleStatus === 'available' &&
+  // Allow submit when handle check passes OR when Firestore check is unavailable
+  // (server-side transaction always catches duplicates)
+  const handleOk = handleStatus === 'available' || handleStatus === 'unchecked'
+  const canSubmit = profileNameOk && handleSyntaxOk && handleOk &&
     emailFormatOk && emailStatus === 'available' &&
     passLenOk && passMatch && aceptaOk && !loading
 
-  async function handleGoogle() {
-    setServerError(''); setLoading(true)
-    try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider())
-      // Google users still need to pick a handle — redirect to complete profile
-      router.push('/registro/completar?uid=' + cred.user.uid)
-    } catch (err) {
-      if (err.code !== 'auth/cancelled-popup-request') setServerError(friendlyError(err.code))
-    } finally { setLoading(false) }
+  function handleGoogle() {
+    setServerError('')
+    signInWithRedirect(auth, new GoogleAuthProvider())
   }
 
   async function onSubmit(e) {
@@ -144,16 +166,15 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       // Re-check before creating (race condition guard)
-      const methods = await fetchSignInMethodsForEmail(auth, emailNorm)
+      const methods = await fetchSignInMethodsForEmail(auth, emailNorm).catch(() => [])
       if (methods.length > 0) { setEmailStatus('taken'); throw new Error('Ese correo ya está registrado.') }
       const slug = normalizeHandle(form.handle)
-      const unameSnap = await getDoc(doc(db, 'usernames', slug))
-      if (unameSnap.exists()) { setHandleStatus('taken'); throw new Error('Ese usuario ya está en uso.') }
+      const unameSnap = await getDoc(doc(db, 'usernames', slug)).catch(() => null)
+      if (unameSnap?.exists()) { setHandleStatus('taken'); throw new Error('Ese usuario ya está en uso.') }
 
       const cred = await createUserWithEmailAndPassword(auth, emailNorm, form.pass)
       await updateProfile(cred.user, { displayName: form.profileName.trim() })
 
-      // Resolve Minecraft UUID if username provided
       let mcUUID = null
       if (form.minecraftUsername.trim()) {
         try {
@@ -173,11 +194,11 @@ export default function RegisterPage() {
       router.push('/amigos')
     } catch (err) {
       const code = err?.code || ''
-      const msg = err?.message || ''
-      if (code === 'auth/weak-password') setServerError('La contraseña es muy débil.')
-      else if (code === 'auth/invalid-email') setServerError('Correo inválido.')
+      const msg  = err?.message || ''
+      if (code === 'auth/weak-password')            setServerError('La contraseña es muy débil.')
+      else if (code === 'auth/invalid-email')        setServerError('Correo inválido.')
       else if (code === 'auth/email-already-in-use' || /correo ya est/i.test(msg)) setServerError('Ese correo ya está registrado.')
-      else if (/usuario ya est/i.test(msg)) setServerError('Ese usuario ya está en uso. Elige otro.')
+      else if (/usuario ya est/i.test(msg))          setServerError('Ese usuario ya está en uso. Elige otro.')
       else setServerError('Ocurrió un error creando la cuenta.')
 
       const u = auth.currentUser
@@ -185,16 +206,26 @@ export default function RegisterPage() {
     } finally { setLoading(false) }
   }
 
+  if (googleLoading) {
+    return (
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <style>{S}</style>
+        <svg style={{ animation:'spin .7s linear infinite', width:28, height:28 }} viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+          <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".2"/><path d="M21 12a9 9 0 00-9-9"/>
+        </svg>
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 88 }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{S}</style>
       <div style={{ width: '100%', maxWidth: 440 }}>
         <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 28, fontWeight: 700, marginBottom: 6 }}>Crear cuenta</h1>
         <p style={{ color: 'var(--sub)', fontSize: 14, marginBottom: 24 }}>
           ¿Ya tienes cuenta? <Link href="/login" style={{ color: 'var(--accent2)' }}>Inicia sesión</Link>
         </p>
 
-        {/* Google */}
         <button onClick={handleGoogle} disabled={loading} style={googleBtn}>
           <GoogleLogo />
           Registrarse con Google
@@ -204,7 +235,6 @@ export default function RegisterPage() {
 
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* Nombre de perfil */}
           <Field label="Nombre de perfil">
             <input
               type="text"
@@ -218,7 +248,6 @@ export default function RegisterPage() {
             {touched.profileName && !profileNameOk && <Hint color="#f87171">Mínimo 2 caracteres.</Hint>}
           </Field>
 
-          {/* Handle */}
           <Field label="Usuario">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--sub)', fontSize: 14 }}>@</span>
@@ -241,11 +270,11 @@ export default function RegisterPage() {
               checkingText="Comprobando…"
               availableText="Disponible ✓"
               takenText="Ese usuario ya está en uso."
+              uncheckedText="No se pudo verificar disponibilidad (se comprobará al crear la cuenta)."
             />
             <Hint color="var(--muted)">Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</Hint>
           </Field>
 
-          {/* Email */}
           <Field label="Correo electrónico">
             <input
               type="email"
@@ -268,7 +297,6 @@ export default function RegisterPage() {
             {touched.email && !emailFormatOk && form.email && <Hint color="#f87171">Correo inválido.</Hint>}
           </Field>
 
-          {/* Contraseña */}
           <Field label="Contraseña">
             <div style={{ position: 'relative' }}>
               <input
@@ -286,7 +314,6 @@ export default function RegisterPage() {
             {touched.pass && !passLenOk && <Hint color="#f87171">Mínimo 8 caracteres.</Hint>}
           </Field>
 
-          {/* Confirmar contraseña */}
           <Field label="Confirmar contraseña">
             <div style={{ position: 'relative' }}>
               <input
@@ -304,7 +331,6 @@ export default function RegisterPage() {
             {showPassMismatch && <Hint color="#f87171">Las contraseñas no coinciden.</Hint>}
           </Field>
 
-          {/* Minecraft username opcional */}
           <Field label="Usuario de Minecraft (opcional)">
             <input
               type="text"
@@ -316,7 +342,6 @@ export default function RegisterPage() {
             <Hint color="var(--muted)">Para mostrar tu skin en el perfil. No necesitas cuenta premium.</Hint>
           </Field>
 
-          {/* Términos */}
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'var(--sub)', cursor: 'pointer', marginTop: 2 }}>
             <input
               type="checkbox"
@@ -327,9 +352,9 @@ export default function RegisterPage() {
             />
             <span>
               Acepto los{' '}
-              <Link href="/terminos" target="_blank" style={{ color: 'var(--accent2)' }}>Términos</Link>
+              <a href="#" onClick={e => e.preventDefault()} style={{ color: 'var(--accent2)' }}>Términos</a>
               {' '}y la{' '}
-              <Link href="/privacidad" target="_blank" style={{ color: 'var(--accent2)' }}>Política de privacidad</Link>.
+              <a href="#" onClick={e => e.preventDefault()} style={{ color: 'var(--accent2)' }}>Política de privacidad</a>.
             </span>
           </label>
           {touched.acepta && !aceptaOk && <Hint color="#f87171">Debes aceptar los términos para continuar.</Hint>}
@@ -344,7 +369,8 @@ export default function RegisterPage() {
             type="submit"
             disabled={!canSubmit}
             style={{
-              padding: '12px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed',
+              padding: '12px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 600,
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
               background: canSubmit ? 'var(--accent)' : 'var(--card)',
               color: canSubmit ? '#fff' : 'var(--muted)',
               transition: 'background 0.2s',
@@ -358,7 +384,22 @@ export default function RegisterPage() {
   )
 }
 
-// ── Small helpers ──────────────────────────────────────────────────────────────
+export default function RegistroPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <style>{`@keyframes spin { to { transform:rotate(360deg) } }`}</style>
+        <svg style={{ animation:'spin .7s linear infinite', width:28, height:28 }} viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+          <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity=".2"/><path d="M21 12a9 9 0 00-9-9"/>
+        </svg>
+      </div>
+    }>
+      <RegisterPage />
+    </Suspense>
+  )
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function Field({ label, children }) {
   return (
@@ -373,11 +414,12 @@ function Hint({ color, children }) {
   return <span style={{ fontSize: 12, color }}>{children}</span>
 }
 
-function StatusHint({ status, syntaxOk, touched, msg, checkingText, availableText, takenText }) {
-  if (status === 'checking') return <Hint color="#facc15"><TinySpinner />{checkingText}</Hint>
-  if (status === 'available' && syntaxOk) return <Hint color="#4ade80">{availableText}</Hint>
-  if (status === 'taken') return <Hint color="#f87171">{takenText}</Hint>
-  if (touched && !syntaxOk && msg) return <Hint color="#f87171">{msg}</Hint>
+function StatusHint({ status, syntaxOk, touched, msg, checkingText, availableText, takenText, uncheckedText }) {
+  if (status === 'checking')                return <Hint color="#facc15"><TinySpinner />{checkingText}</Hint>
+  if (status === 'available' && syntaxOk)   return <Hint color="#4ade80">{availableText}</Hint>
+  if (status === 'taken')                   return <Hint color="#f87171">{takenText}</Hint>
+  if (status === 'unchecked' && uncheckedText) return <Hint color="#94a3b8">{uncheckedText}</Hint>
+  if (touched && !syntaxOk && msg)          return <Hint color="#f87171">{msg}</Hint>
   return null
 }
 
@@ -429,10 +471,10 @@ const eyeBtn = {
 
 function friendlyError(code) {
   const map = {
-    'auth/email-already-in-use': 'Ya existe una cuenta con ese email.',
-    'auth/weak-password': 'La contraseña es muy débil.',
-    'auth/invalid-email': 'El email no es válido.',
-    'auth/network-request-failed': 'Error de red.',
+    'auth/email-already-in-use':  'Ya existe una cuenta con ese email.',
+    'auth/weak-password':         'La contraseña es muy débil.',
+    'auth/invalid-email':         'El email no es válido.',
+    'auth/network-request-failed':'Error de red.',
   }
   return map[code] ?? `Error: ${code}`
 }
