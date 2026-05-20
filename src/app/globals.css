@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+:root {
+  --bg:      #09090b;
+  --bg2:     #111116;
+  --bg3:     #18181f;
+  --card:    #1c1c24;
+  --border:  #2a2a38;
+  --accent:  #7c3aed;
+  --accent2: #a855f7;
+  --text:    #f4f4f5;
+  --muted:   #71717a;
+  --sub:     #a1a1aa;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+button, [role="button"], a { cursor: pointer; }
