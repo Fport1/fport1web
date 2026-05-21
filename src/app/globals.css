@@ -333,3 +333,4 @@ kbd {
   font-size: .8em;
   color: var(--sub);
 }
+@keyframes spin { to { transform: rotate(360deg); } }

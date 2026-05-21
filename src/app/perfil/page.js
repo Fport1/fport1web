@@ -88,25 +88,26 @@ export default function PerfilPage() {
     return () => unsub()
   }, [openChatId])
 
-  async function searchUser() {
-    if (!searchQ.trim()) return
-    setSearching(true); setSearchResult(null); setAddMsg(null)
-    try {
-      const norm = searchQ.trim().toLowerCase().replace(/^@/, '').replace(/\s+/g, '')
-      if (!norm) { setSearching(false); return }
-      // usernameSlug is stored without @ (e.g. "fport1"), perfect for prefix queries
-      const snap = await getDocs(query(
-        collection(db, 'users'),
-        where('usernameSlug', '>=', norm),
-        where('usernameSlug', '<=', norm + ''),
-        limit(8)
-      ))
-      const results = snap.docs.filter(d => d.id !== user.uid).map(d => ({ uid: d.id, ...d.data() }))
-      setSearchResult(results)
-    } catch (err) {
-      setAddMsg({ type: 'err', text: 'Error al buscar.' })
-    } finally { setSearching(false) }
-  }
+  useEffect(() => {
+    const norm = searchQ.trim().toLowerCase().replace(/^@/, '').replace(/s+/g, '')
+    if (!norm) { setSearchResult(null); setSearching(false); return }
+    setSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'users'),
+          where('usernameSlug', '>=', norm),
+          where('usernameSlug', '<=', norm + ''),
+          limit(8)
+        ))
+        setSearchResult(snap.docs.filter(d => d.id !== user?.uid).map(d => ({ uid: d.id, ...d.data() })))
+      } catch {
+        setSearchResult([])
+      } finally { setSearching(false) }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchQ, user])
+
 
   async function addFriend(friend) {
     try {
@@ -230,13 +231,11 @@ export default function PerfilPage() {
       {tab === 'add' && (
         <div style={{ maxWidth: 480 }}>
           <p style={{ fontSize: 13, color: 'var(--sub)', marginBottom: 16 }}>Busca por @usuario (o parte de él) y añade a quien quieras.</p>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <input value={searchQ} onChange={e => setSearchQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchUser()}
+          <div style={{ position: 'relative', marginBottom: 16 }}>
+            <input value={searchQ} onChange={e => { setSearchQ(e.target.value); setAddMsg(null) }}
               placeholder="@usuario..."
-              style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontSize: 14, outline: 'none' }} />
-            <button onClick={searchUser} disabled={searching} style={{ padding: '10px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer' }}>
-              {searching ? '...' : 'Buscar'}
-            </button>
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontSize: 14, outline: 'none', boxSizing: 'border-box', paddingRight: searching ? 36 : 14 }} />
+            {searching && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .6s linear infinite', display: 'inline-block' }} />}
           </div>
           {addMsg && <p style={{ fontSize: 13, color: addMsg.type === 'ok' ? '#4ade80' : '#f87171', marginBottom: 12 }}>{addMsg.text}</p>}
           {searchResult && searchResult.length === 0 && <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sin resultados.</p>}
