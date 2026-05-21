@@ -86,7 +86,7 @@ function RegisterPage() {
         // Check if user already has a profile
         const snap = await getDoc(doc(db, 'users', result.user.uid))
         if (snap.exists() && snap.data().usernameSlug) {
-          router.push('/amigos')
+          router.push('/perfil')
         } else {
           router.push('/registro/completar')
         }
@@ -191,7 +191,7 @@ function RegisterPage() {
         minecraftUsername: form.minecraftUsername.trim() || null,
         minecraftUUID: mcUUID,
       })
-      router.push('/amigos')
+      router.push('/perfil')
     } catch (err) {
       const code = err?.code || ''
       const msg  = err?.message || ''

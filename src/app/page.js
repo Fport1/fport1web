@@ -319,7 +319,7 @@ export default function Home() {
           <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18 }}>Fport1</span>
           <div style={{ display: 'flex', gap: 20 }}>
             <Link href="/login" style={{ color: 'var(--muted)', fontSize: 13, textDecoration: 'none' }}>Entrar</Link>
-            <Link href="/amigos" style={{ color: 'var(--muted)', fontSize: 13, textDecoration: 'none' }}>Amigos</Link>
+            <Link href="/perfil" style={{ color: 'var(--muted)', fontSize: 13, textDecoration: 'none' }}>Social</Link>
           </div>
           <span>© 2025 Francisco Porto</span>
         </div>

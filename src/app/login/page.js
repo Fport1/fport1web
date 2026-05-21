@@ -23,7 +23,7 @@ export default function LoginPage() {
     setError(''); setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email, password)
-      router.push('/amigos')
+      router.push('/perfil')
     } catch (err) {
       setError(friendlyError(err.code))
     } finally { setLoading(false) }
@@ -33,7 +33,7 @@ export default function LoginPage() {
     setError(''); setLoading(true)
     try {
       await signInWithPopup(auth, new GoogleAuthProvider())
-      router.push('/amigos')
+      router.push('/perfil')
     } catch (err) {
       if (err.code !== 'auth/cancelled-popup-request') setError(friendlyError(err.code))
     } finally { setLoading(false) }

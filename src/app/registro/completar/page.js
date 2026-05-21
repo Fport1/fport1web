@@ -95,7 +95,7 @@ function CompletarForm() {
         minecraftUsername: null,
         minecraftUUID:     null,
       })
-      router.push('/amigos')
+      router.push('/perfil')
     } catch (err) {
       setServerError(err.message ?? 'Error al guardar el perfil.')
     } finally { setSubmitting(false) }

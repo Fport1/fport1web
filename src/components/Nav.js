@@ -42,14 +42,14 @@ export default function Nav() {
                 <button
                   onClick={() => setOpen(v => !v)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    background: 'none', border: '1px solid var(--border)',
-                    borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
-                    color: 'var(--text)', fontSize: 13, fontWeight: 500,
-                    transition: 'border-color .15s',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    background: 'none', border: 'none',
+                    padding: 0, cursor: 'pointer',
+                    color: 'var(--sub)', fontSize: 13, fontWeight: 500,
+                    transition: 'color .15s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent2)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--sub)'}
                 >
                   {profile?.profileName || profile?.username || 'Perfil'}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -67,7 +67,7 @@ export default function Nav() {
                     animation: 'dropdownIn .12s ease',
                   }}>
                     <Link
-                      href="/amigos"
+                      href="/perfil"
                       onClick={() => setOpen(false)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
