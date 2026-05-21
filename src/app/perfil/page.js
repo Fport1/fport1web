@@ -180,7 +180,7 @@ export default function PerfilPage() {
         <Avatar src={myAvatar} name={myName} size={52} />
         <div style={{ flex: 1 }}>
           <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 24, fontWeight: 700, margin: 0 }}>{myName}</h1>
-          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle}</p>}
+          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle.replace(/^@/, '')}</p>}
         </div>
         <button onClick={copyMyLink} style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer', transition: 'border-color .2s' }}>
           {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace'}
@@ -243,7 +243,7 @@ export default function PerfilPage() {
                 <Avatar src={u.photoURL} name={uname} size={36} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 600 }}>{uname}</p>
-                  {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username}</p>}
+                  {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username.replace(/^@/, '')}</p>}
                 </div>
                 <button onClick={() => addFriend(u)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Añadir</button>
               </div>

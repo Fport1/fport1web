@@ -12,7 +12,8 @@ function getInitial(name) {
 }
 
 function MiniAvatar({ photoURL, name, size = 22 }) {
-  if (photoURL) return <img src={photoURL} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />
+  const [err, setErr] = useState(false)
+  if (photoURL && !err) return <img src={photoURL} alt={name} onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.45, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
       {getInitial(name)}
@@ -143,7 +144,7 @@ export default function Nav() {
                       <MiniAvatar photoURL={profile?.photoURL} name={myName} size={28} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</p>
-                        {profile?.username && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>@{profile.username}</p>}
+                        {profile?.username && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>@{profile.username.replace(/^@/, '')}</p>}
                       </div>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
@@ -161,7 +162,7 @@ export default function Nav() {
                             <MiniAvatar photoURL={acc.photoURL} name={acc.profileName} size={22} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontSize: 13, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.profileName}</p>
-                              {acc.username && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>@{acc.username}</p>}
+                              {acc.username && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>@{acc.username.replace(/^@/, '')}</p>}
                             </div>
                             <span
                               onClick={e => removeAccount(acc.uid, e)}
