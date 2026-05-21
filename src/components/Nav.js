@@ -23,16 +23,18 @@ export default function Nav() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <Link href="/#launcher" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Launcher</Link>
 
-          {/* Don't render auth UI until Firebase resolves — avoids false "Entrar" flash */}
           {!loading && (
             user ? (
               <>
-                <Link href="/amigos" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Amigos</Link>
+                <Link href="/amigos" style={{ color: 'var(--sub)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
+                  {profile?.profileName || profile?.username || 'Perfil'}
+                </Link>
                 <button
                   onClick={signOut}
-                  style={{ fontSize: 13, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  title="Cerrar sesión"
+                  style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
                 >
-                  {profile?.profileName || profile?.username || '—'}
+                  Salir
                 </button>
               </>
             ) : (

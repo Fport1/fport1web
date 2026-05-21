@@ -189,40 +189,38 @@ function LauncherAuthInner() {
       })
   }, [])
 
-  // Write the session to Firestore so the launcher can pick it up
+  // Write the session to Firestore so the launcher can pick it up via onSnapshot
   async function notifyLauncher(cred) {
-    const activeCred = cred || credential
-    if (!activeCred?.idToken) { setError('Sin credenciales. Intenta de nuevo.'); setStatus('error'); return }
+    if (!cred?.idToken) { setError('Sin credenciales. Intenta de nuevo.'); setStatus('error'); return }
+
+    // sessionCode may be gone from URL after Google redirect — fall back to sessionStorage
+    const code = sessionCode || sessionStorage.getItem('launcher_code')
 
     try {
-      if (sessionCode) {
-        // Launcher provided a code → write to Firestore so launcher picks it up via onSnapshot
-        await setDoc(doc(db, 'launcher_sessions', sessionCode), {
-          idToken:     activeCred.idToken,
-          accessToken: activeCred.accessToken ?? '',
+      if (code) {
+        await setDoc(doc(db, 'launcher_sessions', code), {
+          idToken:     cred.idToken,
+          accessToken: cred.accessToken ?? '',
           createdAt:   serverTimestamp(),
         })
-        setStatus('done')
-      } else {
-        // No code (user opened the page manually) → just show success
-        setStatus('done')
+        sessionStorage.removeItem('launcher_code')
       }
+      setStatus('done')
     } catch(err) {
       setError(err.message ?? 'No se pudo notificar al launcher.')
       setStatus('error')
     }
   }
 
-  // Triggered when profile-needed → ProfileForm calls onDone
-  async function onProfileDone() {
-    setStatus('writing')
-    await notifyLauncher(credential)
-  }
-
-  // Auto-write session once we enter 'writing' state
+  // Call notifyLauncher only once when we have both status=writing AND credential
   useEffect(() => {
-    if (status === 'writing') notifyLauncher(credential)
-  }, [status])
+    if (status === 'writing' && credential) notifyLauncher(credential)
+  }, [status, credential])
+
+  // Profile form done → just transition to writing, useEffect handles the rest
+  function onProfileDone() {
+    setStatus('writing')
+  }
 
   function handleGoogle() {
     setError('')

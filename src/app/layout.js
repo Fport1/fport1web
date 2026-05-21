@@ -12,6 +12,7 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <body className="antialiased">
         <AuthProvider>
+          <div className="grid-overlay" />
           <Nav />
           {children}
         </AuthProvider>

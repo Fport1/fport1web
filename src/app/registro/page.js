@@ -218,15 +218,15 @@ function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 88 }}>
+    <div className="auth-page">
       <style>{S}</style>
-      <div style={{ width: '100%', maxWidth: 440 }}>
-        <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 28, fontWeight: 700, marginBottom: 6 }}>Crear cuenta</h1>
-        <p style={{ color: 'var(--sub)', fontSize: 14, marginBottom: 24 }}>
+      <div className="auth-card">
+        <h1 className="auth-title">Crear cuenta</h1>
+        <p className="auth-sub">
           ¿Ya tienes cuenta? <Link href="/login" style={{ color: 'var(--accent2)' }}>Inicia sesión</Link>
         </p>
 
-        <button onClick={handleGoogle} disabled={loading} style={googleBtn}>
+        <button onClick={handleGoogle} disabled={loading} className="auth-google-btn">
           <GoogleLogo />
           Registrarse con Google
         </button>
@@ -365,17 +365,7 @@ function RegisterPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            style={{
-              padding: '12px', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 600,
-              cursor: canSubmit ? 'pointer' : 'not-allowed',
-              background: canSubmit ? 'var(--accent)' : 'var(--card)',
-              color: canSubmit ? '#fff' : 'var(--muted)',
-              transition: 'background 0.2s',
-            }}
-          >
+          <button type="submit" disabled={!canSubmit} className="auth-submit-btn">
             {loading ? 'Creando cuenta...' : 'Crear cuenta'}
           </button>
         </form>

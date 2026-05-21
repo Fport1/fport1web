@@ -177,29 +177,26 @@ export default function AmigosPage() {
   const myAvatar = profile?.photoURL ?? (profile?.minecraftUUID ? minecraftHead(profile.minecraftUUID) : null)
 
   return (
-    <div style={{ paddingTop: 60, minHeight: '100vh', maxWidth: 900, margin: '0 auto', padding: '60px 16px 40px' }}>
+    <div className="profile-page">
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28, marginTop: 20 }}>
-        <Avatar src={myAvatar} name={myName} size={48} />
-        <div>
-          <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 22, fontWeight: 700 }}>{myName}</h1>
-          {myHandle && <p style={{ fontSize: 12, color: 'var(--muted)' }}>{myHandle}</p>}
+      {/* Profile header */}
+      <div className="profile-header">
+        <Avatar src={myAvatar} name={myName} size={52} />
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 24, fontWeight: 700, margin: 0 }}>{myName}</h1>
+          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>{myHandle}</p>}
         </div>
-        <button onClick={copyMyLink} style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 9, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer' }}>
-          {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace de amigo'}
+        <button onClick={copyMyLink} style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer', transition: 'border-color .2s' }}>
+          {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace'}
         </button>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+      <div className="profile-tabs">
         {[['friends', '👥 Amigos'], ['add', '➕ Añadir'], ['chat', '💬 Chat']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{
-            padding: '8px 18px', border: 'none', background: 'none', cursor: 'pointer',
-            color: tab === key ? 'var(--accent2)' : 'var(--muted)',
-            borderBottom: tab === key ? '2px solid var(--accent2)' : '2px solid transparent',
-            fontSize: 14, fontWeight: tab === key ? 600 : 400, marginBottom: -1,
-          }}>{label}</button>
+          <button key={key} onClick={() => setTab(key)} className={`profile-tab${tab === key ? ' active' : ''}`}>
+            {label}
+          </button>
         ))}
       </div>
 

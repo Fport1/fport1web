@@ -118,14 +118,12 @@ function CompletarForm() {
     (touched.handle && (!handleSynOk || handleStatus === 'taken')) ? 'error' : 'idle'
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, paddingTop:88 }}>
+    <div className="auth-page">
       <style>{S}</style>
-      <div style={{ width:'100%', maxWidth:440 }}>
-        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 6px' }}>fport1-social</p>
-        <h1 style={{ fontSize:26, fontWeight:700, margin:'0 0 6px' }}>Completa tu perfil</h1>
-        <p style={{ color:'var(--sub)', fontSize:14, margin:'0 0 28px' }}>
-          Elige un nombre de perfil y un @usuario único para tu cuenta.
-        </p>
+      <div className="auth-card">
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 6px' }}>Fport1</p>
+        <h1 className="auth-title" style={{ margin:'0 0 6px' }}>Completa tu perfil</h1>
+        <p className="auth-sub">Elige un nombre de perfil y un @usuario único para tu cuenta.</p>
 
         <form onSubmit={onSubmit} style={{ display:'flex', flexDirection:'column', gap:16 }}>
           <Field label="Nombre de perfil">
@@ -157,13 +155,7 @@ function CompletarForm() {
             </div>
           )}
 
-          <button type="submit" disabled={!canSubmit} style={{
-            padding:'12px', borderRadius:10, border:'none', fontSize:14, fontWeight:600,
-            cursor: canSubmit ? 'pointer' : 'not-allowed',
-            background: canSubmit ? 'var(--accent)' : 'var(--card)',
-            color: canSubmit ? '#fff' : 'var(--muted)',
-            transition:'background .2s',
-          }}>
+          <button type="submit" disabled={!canSubmit} className="auth-submit-btn">
             {submitting ? 'Guardando…' : 'Continuar'}
           </button>
         </form>
