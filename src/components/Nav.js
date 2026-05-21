@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '@/components/auth-context'
 
 export default function Nav() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, loading, signOut } = useAuth()
 
   return (
     <nav style={{
@@ -22,24 +22,28 @@ export default function Nav() {
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <Link href="/#launcher" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Launcher</Link>
-          {user ? (
-            <>
-              <Link href="/amigos" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Amigos</Link>
-              <button
-                onClick={signOut}
-                style={{ fontSize: 13, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                {profile?.displayName || user.email?.split('@')[0]}
-              </button>
-            </>
-          ) : (
-            <Link href="/login" style={{
-              fontSize: 13, fontWeight: 600,
-              background: 'var(--accent)', color: '#fff',
-              padding: '6px 16px', borderRadius: 8, textDecoration: 'none',
-            }}>
-              Entrar
-            </Link>
+
+          {/* Don't render auth UI until Firebase resolves — avoids false "Entrar" flash */}
+          {!loading && (
+            user ? (
+              <>
+                <Link href="/amigos" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Amigos</Link>
+                <button
+                  onClick={signOut}
+                  style={{ fontSize: 13, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {profile?.profileName || profile?.username || '—'}
+                </button>
+              </>
+            ) : (
+              <Link href="/login" style={{
+                fontSize: 13, fontWeight: 600,
+                background: 'var(--accent)', color: '#fff',
+                padding: '6px 16px', borderRadius: 8, textDecoration: 'none',
+              }}>
+                Entrar
+              </Link>
+            )
           )}
         </div>
       </div>

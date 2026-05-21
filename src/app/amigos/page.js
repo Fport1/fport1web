@@ -15,10 +15,11 @@ import {
 function chatId(a, b) { return [a, b].sort().join('_') }
 
 function Avatar({ src, name, size = 36 }) {
+  const initial = name ? name.trim()[0].toUpperCase() : '?'
   if (src) return <img src={src} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', imageRendering: 'pixelated' }} />
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-      {name?.[0]?.toUpperCase() ?? '?'}
+      {initial}
     </div>
   )
 }
@@ -171,17 +172,19 @@ export default function AmigosPage() {
 
   // ── render ─────────────────────────────────────────────────────────────────
 
-  const myAvatar = profile?.photoURL ?? (profile?.minecraftUsername ? minecraftHead(profile.minecraftUUID) : null)
+  const myName   = profile?.profileName || profile?.username || 'Sin nombre'
+  const myHandle = profile?.username   || null
+  const myAvatar = profile?.photoURL ?? (profile?.minecraftUUID ? minecraftHead(profile.minecraftUUID) : null)
 
   return (
     <div style={{ paddingTop: 60, minHeight: '100vh', maxWidth: 900, margin: '0 auto', padding: '60px 16px 40px' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28, marginTop: 20 }}>
-        <Avatar src={myAvatar} name={profile?.displayName} size={48} />
+        <Avatar src={myAvatar} name={myName} size={48} />
         <div>
-          <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 22, fontWeight: 700 }}>{profile?.displayName ?? user.email}</h1>
-          <p style={{ fontSize: 12, color: 'var(--muted)' }}>{user.email}</p>
+          <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 22, fontWeight: 700 }}>{myName}</h1>
+          {myHandle && <p style={{ fontSize: 12, color: 'var(--muted)' }}>{myHandle}</p>}
         </div>
         <button onClick={copyMyLink} style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 9, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer' }}>
           {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace de amigo'}
