@@ -12,8 +12,9 @@ import {
 function chatId(a, b) { return [a, b].sort().join('_') }
 
 function Avatar({ src, name, size = 36 }) {
+  const [err, setErr] = useState(false)
   const initial = name ? name.trim()[0].toUpperCase() : '?'
-  if (src) return <img src={src} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', imageRendering: 'pixelated' }} />
+  if (src && !err) return <img src={src} alt={name} onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', imageRendering: 'pixelated' }} />
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
       {initial}
@@ -25,6 +26,8 @@ function minecraftHead(uuid) {
   if (!uuid) return null
   return `https://crafatar.com/avatars/${uuid.replace(/-/g, '')}?size=72&overlay`
 }
+
+function stripAt(s) { return s ? s.replace(/^@/, '') : s }
 
 export default function PerfilPage() {
   const router = useRouter()
@@ -91,22 +94,23 @@ export default function PerfilPage() {
     try {
       const norm = searchQ.trim().toLowerCase().replace(/^@/, '').replace(/\s+/g, '')
       if (!norm) { setSearching(false); return }
+      // usernameSlug is stored without @ (e.g. "fport1"), perfect for prefix queries
       const snap = await getDocs(query(
         collection(db, 'users'),
-        where('username', '>=', norm),
-        where('username', '<=', norm + ''),
+        where('usernameSlug', '>=', norm),
+        where('usernameSlug', '<=', norm + ''),
         limit(8)
       ))
       const results = snap.docs.filter(d => d.id !== user.uid).map(d => ({ uid: d.id, ...d.data() }))
       setSearchResult(results)
-    } catch {
+    } catch (err) {
       setAddMsg({ type: 'err', text: 'Error al buscar.' })
     } finally { setSearching(false) }
   }
 
   async function addFriend(friend) {
     try {
-      const friendName = friend.profileName || friend.username || '?'
+      const friendName = friend.profileName || stripAt(friend.username) || '?'
       await setDoc(doc(db, 'users', user.uid, 'friends', friend.uid), {
         profileName: friendName,
         photoURL: friend.photoURL ?? null,
@@ -130,8 +134,8 @@ export default function PerfilPage() {
     const chatRef = doc(db, 'chats', cid)
     const snap = await getDoc(chatRef)
     if (!snap.exists()) {
-      const myName = profile?.profileName || profile?.username || 'Tú'
-      const theirName = friend?.profileName || friend?.username || '?'
+      const myName = profile?.profileName || stripAt(profile?.username) || 'Tú'
+      const theirName = friend?.profileName || stripAt(friend?.username) || '?'
       await setDoc(chatRef, {
         members: [user.uid, friendUid].sort(),
         memberNames: { [user.uid]: myName, [friendUid]: theirName },
@@ -152,7 +156,7 @@ export default function PerfilPage() {
     const chatRef = doc(db, 'chats', openChatId)
     await addDoc(collection(db, 'chats', openChatId, 'messages'), {
       sender: user.uid,
-      senderName: profile?.profileName || profile?.username || 'Tú',
+      senderName: profile?.profileName || stripAt(profile?.username) || 'Tú',
       text,
       createdAt: serverTimestamp(),
     })
@@ -169,8 +173,8 @@ export default function PerfilPage() {
   if (authLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>Cargando...</div>
   if (!user) return null
 
-  const myName   = profile?.profileName || profile?.username || 'Sin nombre'
-  const myHandle = profile?.username || null
+  const myName   = profile?.profileName || stripAt(profile?.username) || 'Sin nombre'
+  const myHandle = profile?.username ? stripAt(profile.username) : null
   const myAvatar = profile?.photoURL ?? (profile?.minecraftUUID ? minecraftHead(profile.minecraftUUID) : null)
 
   return (
@@ -180,7 +184,7 @@ export default function PerfilPage() {
         <Avatar src={myAvatar} name={myName} size={52} />
         <div style={{ flex: 1 }}>
           <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 24, fontWeight: 700, margin: 0 }}>{myName}</h1>
-          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle.replace(/^@/, '')}</p>}
+          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle}</p>}
         </div>
         <button onClick={copyMyLink} style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer', transition: 'border-color .2s' }}>
           {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace'}
@@ -204,7 +208,7 @@ export default function PerfilPage() {
             </div>
           ) : friends.map(f => {
             const p = presence[f.uid]
-            const fname = f.profileName || f.username || '?'
+            const fname = f.profileName || stripAt(f.username) || '?'
             const head = f.minecraftUUID ? minecraftHead(f.minecraftUUID) : null
             return (
               <div key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px' }}>
@@ -237,13 +241,14 @@ export default function PerfilPage() {
           {addMsg && <p style={{ fontSize: 13, color: addMsg.type === 'ok' ? '#4ade80' : '#f87171', marginBottom: 12 }}>{addMsg.text}</p>}
           {searchResult && searchResult.length === 0 && <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sin resultados.</p>}
           {searchResult && searchResult.map(u => {
-            const uname = u.profileName || u.username || '?'
+            const uname = u.profileName || stripAt(u.username) || '?'
+            const uhandle = u.usernameSlug || stripAt(u.username)
             return (
               <div key={u.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
                 <Avatar src={u.photoURL} name={uname} size={36} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 600 }}>{uname}</p>
-                  {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username.replace(/^@/, '')}</p>}
+                  {uhandle && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{uhandle}</p>}
                 </div>
                 <button onClick={() => addFriend(u)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Añadir</button>
               </div>
