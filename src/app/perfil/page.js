@@ -2,15 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
   collection, doc, getDoc, getDocs, setDoc, deleteDoc,
   query, where, orderBy, onSnapshot, addDoc, serverTimestamp, limit,
 } from 'firebase/firestore'
-
-// ── helpers ──────────────────────────────────────────────────────────────────
 
 function chatId(a, b) { return [a, b].sort().join('_') }
 
@@ -26,43 +23,37 @@ function Avatar({ src, name, size = 36 }) {
 
 function minecraftHead(uuid) {
   if (!uuid) return null
-  const clean = uuid.replace(/-/g, '')
-  return `https://crafatar.com/avatars/${clean}?size=72&overlay`
+  return `https://crafatar.com/avatars/${uuid.replace(/-/g, '')}?size=72&overlay`
 }
 
-// ── component ─────────────────────────────────────────────────────────────────
-
-export default function AmigosPage() {
+export default function PerfilPage() {
   const router = useRouter()
   const { user, profile, loading: authLoading } = useAuth()
 
-  const [tab, setTab]           = useState('friends')   // 'friends' | 'chat'
-  const [friends, setFriends]   = useState([])
-  const [presence, setPresence] = useState({})          // uid → { online, playing }
-  const [chats, setChats]       = useState([])
+  const [tab, setTab]               = useState('friends')
+  const [friends, setFriends]       = useState([])
+  const [presence, setPresence]     = useState({})
+  const [chats, setChats]           = useState([])
   const [openChatId, setOpenChatId] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [msgText, setMsgText]   = useState('')
-  const [searchQ, setSearchQ]   = useState('')
+  const [messages, setMessages]     = useState([])
+  const [msgText, setMsgText]       = useState('')
+  const [searchQ, setSearchQ]       = useState('')
   const [searchResult, setSearchResult] = useState(null)
-  const [searching, setSearching] = useState(false)
-  const [addMsg, setAddMsg]     = useState(null)
+  const [searching, setSearching]   = useState(false)
+  const [addMsg, setAddMsg]         = useState(null)
   const [copyFriendLink, setCopyFriendLink] = useState(false)
   const msgEndRef = useRef(null)
 
-  // redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
   }, [authLoading, user, router])
 
-  // load friends + presence
   useEffect(() => {
     if (!user) return
     const q = query(collection(db, 'users', user.uid, 'friends'), orderBy('addedAt', 'desc'))
     const unsub = onSnapshot(q, async snap => {
       const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
       setFriends(list)
-      // load presence for each friend
       const presenceMap = {}
       await Promise.all(list.map(async f => {
         try {
@@ -75,7 +66,6 @@ export default function AmigosPage() {
     return () => unsub()
   }, [user])
 
-  // load chat conversations
   useEffect(() => {
     if (!user) return
     const q = query(collection(db, 'chats'), where('members', 'array-contains', user.uid), orderBy('lastMessageAt', 'desc'))
@@ -85,7 +75,6 @@ export default function AmigosPage() {
     return () => unsub()
   }, [user])
 
-  // load messages for open chat
   useEffect(() => {
     if (!openChatId) return
     const q = query(collection(db, 'chats', openChatId, 'messages'), orderBy('createdAt', 'asc'), limit(100))
@@ -100,8 +89,14 @@ export default function AmigosPage() {
     if (!searchQ.trim()) return
     setSearching(true); setSearchResult(null); setAddMsg(null)
     try {
-      // search by displayName prefix in Firestore (simple approach)
-      const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', searchQ.trim()), where('displayName', '<=', searchQ.trim() + ''), limit(5)))
+      const norm = searchQ.trim().toLowerCase().replace(/^@/, '').replace(/\s+/g, '')
+      if (!norm) { setSearching(false); return }
+      const snap = await getDocs(query(
+        collection(db, 'users'),
+        where('username', '>=', norm),
+        where('username', '<=', norm + ''),
+        limit(8)
+      ))
       const results = snap.docs.filter(d => d.id !== user.uid).map(d => ({ uid: d.id, ...d.data() }))
       setSearchResult(results)
     } catch {
@@ -111,13 +106,15 @@ export default function AmigosPage() {
 
   async function addFriend(friend) {
     try {
+      const friendName = friend.profileName || friend.username || '?'
       await setDoc(doc(db, 'users', user.uid, 'friends', friend.uid), {
-        displayName: friend.displayName,
+        profileName: friendName,
         photoURL: friend.photoURL ?? null,
         minecraftUsername: friend.minecraftUsername ?? null,
+        minecraftUUID: friend.minecraftUUID ?? null,
         addedAt: serverTimestamp(),
       })
-      setAddMsg({ type: 'ok', text: `¡${friend.displayName} añadido!` })
+      setAddMsg({ type: 'ok', text: `¡${friendName} añadido!` })
     } catch {
       setAddMsg({ type: 'err', text: 'Error al añadir.' })
     }
@@ -133,9 +130,11 @@ export default function AmigosPage() {
     const chatRef = doc(db, 'chats', cid)
     const snap = await getDoc(chatRef)
     if (!snap.exists()) {
+      const myName = profile?.profileName || profile?.username || 'Tú'
+      const theirName = friend?.profileName || friend?.username || '?'
       await setDoc(chatRef, {
         members: [user.uid, friendUid].sort(),
-        memberNames: { [user.uid]: profile?.displayName ?? 'Tú', [friendUid]: friend?.displayName ?? '?' },
+        memberNames: { [user.uid]: myName, [friendUid]: theirName },
         createdAt: serverTimestamp(),
         lastMessageAt: serverTimestamp(),
         lastMessage: '',
@@ -153,7 +152,7 @@ export default function AmigosPage() {
     const chatRef = doc(db, 'chats', openChatId)
     await addDoc(collection(db, 'chats', openChatId, 'messages'), {
       sender: user.uid,
-      senderName: profile?.displayName ?? 'Tú',
+      senderName: profile?.profileName || profile?.username || 'Tú',
       text,
       createdAt: serverTimestamp(),
     })
@@ -161,7 +160,7 @@ export default function AmigosPage() {
   }
 
   function copyMyLink() {
-    const url = `${window.location.origin}/friends/${user.uid}`
+    const url = `${window.location.origin}/perfil/${user.uid}`
     navigator.clipboard.writeText(url)
     setCopyFriendLink(true)
     setTimeout(() => setCopyFriendLink(false), 2000)
@@ -170,28 +169,24 @@ export default function AmigosPage() {
   if (authLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>Cargando...</div>
   if (!user) return null
 
-  // ── render ─────────────────────────────────────────────────────────────────
-
   const myName   = profile?.profileName || profile?.username || 'Sin nombre'
-  const myHandle = profile?.username   || null
+  const myHandle = profile?.username || null
   const myAvatar = profile?.photoURL ?? (profile?.minecraftUUID ? minecraftHead(profile.minecraftUUID) : null)
 
   return (
     <div className="profile-page">
 
-      {/* Profile header */}
       <div className="profile-header">
         <Avatar src={myAvatar} name={myName} size={52} />
         <div style={{ flex: 1 }}>
           <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 24, fontWeight: 700, margin: 0 }}>{myName}</h1>
-          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>{myHandle}</p>}
+          {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle}</p>}
         </div>
         <button onClick={copyMyLink} style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer', transition: 'border-color .2s' }}>
           {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace'}
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="profile-tabs">
         {[['friends', '👥 Amigos'], ['add', '➕ Añadir'], ['chat', '💬 Chat']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`profile-tab${tab === key ? ' active' : ''}`}>
@@ -200,7 +195,6 @@ export default function AmigosPage() {
         ))}
       </div>
 
-      {/* FRIENDS TAB */}
       {tab === 'friends' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {friends.length === 0 ? (
@@ -210,12 +204,13 @@ export default function AmigosPage() {
             </div>
           ) : friends.map(f => {
             const p = presence[f.uid]
-            const head = f.minecraftUsername ? minecraftHead(f.minecraftUUID) : null
+            const fname = f.profileName || f.username || '?'
+            const head = f.minecraftUUID ? minecraftHead(f.minecraftUUID) : null
             return (
               <div key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px' }}>
-                <Avatar src={head ?? f.photoURL} name={f.displayName} size={40} />
+                <Avatar src={head ?? f.photoURL} name={fname} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 600, fontSize: 14 }}>{f.displayName}</p>
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>{fname}</p>
                   <p style={{ fontSize: 12, color: p?.playing ? '#22c55e' : p?.online ? '#60a5fa' : 'var(--muted)' }}>
                     {p?.playing ? '🎮 Jugando ahora' : p?.online ? '🟢 En línea' : '⚫ Desconectado'}
                   </p>
@@ -228,13 +223,12 @@ export default function AmigosPage() {
         </div>
       )}
 
-      {/* ADD FRIEND TAB */}
       {tab === 'add' && (
         <div style={{ maxWidth: 480 }}>
-          <p style={{ fontSize: 13, color: 'var(--sub)', marginBottom: 16 }}>Busca a alguien por su nombre de usuario de la plataforma, o pídele que comparta su enlace de amigo.</p>
+          <p style={{ fontSize: 13, color: 'var(--sub)', marginBottom: 16 }}>Busca por @usuario (o parte de él) y añade a quien quieras.</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchUser()}
-              placeholder="Nombre de usuario..."
+              placeholder="@usuario..."
               style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontSize: 14, outline: 'none' }} />
             <button onClick={searchUser} disabled={searching} style={{ padding: '10px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer' }}>
               {searching ? '...' : 'Buscar'}
@@ -242,20 +236,24 @@ export default function AmigosPage() {
           </div>
           {addMsg && <p style={{ fontSize: 13, color: addMsg.type === 'ok' ? '#4ade80' : '#f87171', marginBottom: 12 }}>{addMsg.text}</p>}
           {searchResult && searchResult.length === 0 && <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sin resultados.</p>}
-          {searchResult && searchResult.map(u => (
-            <div key={u.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
-              <Avatar src={u.photoURL} name={u.displayName} size={36} />
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{u.displayName}</span>
-              <button onClick={() => addFriend(u)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Añadir</button>
-            </div>
-          ))}
+          {searchResult && searchResult.map(u => {
+            const uname = u.profileName || u.username || '?'
+            return (
+              <div key={u.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
+                <Avatar src={u.photoURL} name={uname} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600 }}>{uname}</p>
+                  {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username}</p>}
+                </div>
+                <button onClick={() => addFriend(u)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Añadir</button>
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {/* CHAT TAB */}
       {tab === 'chat' && (
         <div style={{ display: 'flex', height: 500, border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          {/* Conversations list */}
           <div style={{ width: 220, borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg2)' }}>
             {chats.length === 0 && <p style={{ padding: 16, fontSize: 13, color: 'var(--muted)' }}>Sin conversaciones aún.</p>}
             {chats.map(c => {
@@ -270,7 +268,6 @@ export default function AmigosPage() {
             })}
           </div>
 
-          {/* Messages pane */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             {!openChatId ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 14 }}>
