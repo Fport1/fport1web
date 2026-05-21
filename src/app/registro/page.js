@@ -178,7 +178,7 @@ function RegisterPage() {
       let mcUUID = null
       if (form.minecraftUsername.trim()) {
         try {
-          const res = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(form.minecraftUsername.trim())}`)
+          const res = await fetch(`/api/minecraft?username=${encodeURIComponent(form.minecraftUsername.trim())}`)
           if (res.ok) mcUUID = (await res.json()).id
         } catch { /* ignore */ }
       }
