@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -20,6 +20,7 @@ if (hasConfig) {
   _app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
   _auth = getAuth(_app)
   _db   = getFirestore(_app)
+  setPersistence(_auth, browserLocalPersistence).catch(() => {})
 }
 
 export const auth = _auth
