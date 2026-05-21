@@ -22,3 +22,190 @@ body {
 }
 
 button, [role="button"], a { cursor: pointer; }
+
+/* ── Grid overlay background ─────────────────────────────── */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Primary button glow ─────────────────────────────────── */
+.btn-glow {
+  box-shadow: 0 0 28px rgba(124,58,237,.4);
+  transition: background .2s, box-shadow .2s, transform .15s;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 44px rgba(168,85,247,.55);
+  transform: translateY(-1px);
+}
+
+/* ── Feature / download card hover ──────────────────────── */
+.card-hover {
+  transition: border-color .2s, box-shadow .2s;
+}
+.card-hover:hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 24px rgba(124,58,237,.15);
+}
+
+/* ── Download button outlined style ─────────────────────── */
+.dl-btn-outline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+.dl-btn-outline:hover {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(124,58,237,.35);
+}
+.dl-btn-outline.unavailable {
+  border-color: var(--border);
+  color: var(--muted);
+  pointer-events: none;
+  opacity: .5;
+}
+
+/* ── macOS guide ─────────────────────────────────────────── */
+@keyframes guide-flash {
+  0%   { border-color: var(--border); box-shadow: none; }
+  20%  { border-color: #f59e0b; box-shadow: 0 0 28px rgba(245,158,11,.5); }
+  40%  { border-color: var(--border); box-shadow: none; }
+  60%  { border-color: #f59e0b; box-shadow: 0 0 28px rgba(245,158,11,.5); }
+  80%  { border-color: var(--border); box-shadow: none; }
+  100% { border-color: #f59e0b; box-shadow: 0 0 18px rgba(245,158,11,.3); }
+}
+.mac-guide { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.mac-guide.flash { animation: guide-flash 1.2s ease forwards; }
+
+.mac-guide-summary {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--bg3);
+  border: none;
+  color: var(--text);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background .2s;
+}
+.mac-guide-summary:hover { background: var(--card); }
+
+.summary-tag {
+  display: inline-block;
+  background: #f59e0b;
+  color: #000;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 10px;
+}
+
+.mac-guide-body {
+  padding: 24px 20px;
+  font-size: 14px;
+  color: var(--sub);
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mac-warning-box {
+  display: flex;
+  gap: 14px;
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.3);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.warn-icon { font-size: 1.5rem; flex-shrink: 0; }
+.mac-warning-box strong { color: #fbbf24; display: block; margin-bottom: 4px; }
+.mac-warning-box p { font-size: 13px; color: var(--sub); }
+.mac-warning-box p strong { color: var(--text); }
+
+.mac-steps { display: flex; flex-direction: column; gap: 14px; }
+
+.mac-step { display: flex; gap: 14px; align-items: flex-start; }
+
+.step-num {
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 0 10px rgba(124,58,237,.4);
+}
+
+.step-content { padding-top: 4px; font-size: 13px; line-height: 1.7; }
+.step-content strong { color: var(--text); }
+.step-content em { color: var(--accent2); font-style: normal; }
+
+.mac-code-block {
+  background: #0d0d12;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mac-code-block code {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #a78bfa;
+  word-break: break-all;
+}
+.copy-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.copy-btn:hover { background: var(--accent2); }
+
+.mac-tip { font-size: 12px; color: var(--muted); }
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: .8em;
+  color: var(--sub);
+}

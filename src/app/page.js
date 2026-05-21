@@ -32,7 +32,8 @@ export default function Home() {
   const [assets, setAssets] = useState({ windows: null, macX64: null, macArm: null, linux: null })
   const [os, setOs] = useState('unknown')
   const [macGuideOpen, setMacGuideOpen] = useState(false)
-  const [macCopied, setMacCopied] = useState(false)
+  const [macCopied, setMacCopied]       = useState(false)
+  const [macFlash, setMacFlash]         = useState(false)
 
   useEffect(() => {
     setOs(detectOS())
@@ -62,6 +63,16 @@ export default function Home() {
     navigator.clipboard.writeText('xattr -d com.apple.quarantine /Applications/ModpackLauncher.app')
     setMacCopied(true)
     setTimeout(() => setMacCopied(false), 2000)
+  }
+
+  function openMacGuide() {
+    setMacGuideOpen(true)
+    setMacFlash(false)
+    setTimeout(() => {
+      setMacFlash(true)
+      document.getElementById('mac-guide')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    setTimeout(() => setMacFlash(false), 1400)
   }
 
   const S = {
@@ -97,12 +108,22 @@ export default function Home() {
     { icon: '👥', title: 'Amigos y chat', text: 'Añade amigos, ve quién está jugando ahora mismo y chatea desde el launcher.' },
   ]
 
+  const dlPlatforms = [
+    { id: 'windows',  label: 'Windows',             desc: 'Instalador NSIS · x64',  ext: '.exe',      url: assets.windows, isMac: false },
+    { id: 'mac-x64',  label: 'macOS Intel',          desc: 'DMG · x64',              ext: '.dmg',      url: assets.macX64,  isMac: true  },
+    { id: 'mac-arm',  label: 'macOS Apple Silicon',  desc: 'DMG · arm64',            ext: '.dmg',      url: assets.macArm,  isMac: true  },
+    { id: 'linux',    label: 'Linux',                desc: 'AppImage · x86_64',      ext: '.AppImage', url: assets.linux,   isMac: false },
+  ]
+
   return (
     <div style={S.page}>
+      {/* Background grid */}
+      <div className="grid-overlay" />
+
       {/* HERO */}
       <div style={{ position: 'relative', background: `radial-gradient(ellipse 60% 50% at 70% 50%, rgba(124,58,237,.12) 0%, transparent 70%)` }}>
         <div style={S.hero}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
             <p style={S.label}>Featured Project</p>
             <h1 style={S.h1}>Modpack<span style={S.accent}>Launcher</span></h1>
             <p style={S.sub}>
@@ -111,12 +132,12 @@ export default function Home() {
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {mainDownloadUrl ? (
-                <a href={mainDownloadUrl} style={S.btnPrimary}>
+                <a href={mainDownloadUrl} style={S.btnPrimary} className="btn-glow">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {mainLabel}
                 </a>
               ) : (
-                <a href="#descargar" style={S.btnPrimary}>{mainLabel}</a>
+                <a href="#descargar" style={S.btnPrimary} className="btn-glow">{mainLabel}</a>
               )}
               <a href="#descargar" style={S.btnGhost}>Ver todas las plataformas</a>
             </div>
@@ -124,8 +145,8 @@ export default function Home() {
           </div>
 
           {/* Mockup */}
-          <div style={{ flex: '0 0 420px', maxWidth: '100%' }}>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
+          <div style={{ flex: '0 0 420px', maxWidth: '100%', position: 'relative', zIndex: 1 }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 60px rgba(124,58,237,.2), 0 24px 80px rgba(0,0,0,.6)' }}>
               <div style={{ background: 'var(--bg3)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
                 <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
@@ -161,7 +182,7 @@ export default function Home() {
         <h2 style={S.secTitle}>¿Por qué <span style={S.accent}>ModpackLauncher</span>?</h2>
         <div style={S.grid}>
           {features.map(f => (
-            <div key={f.title} style={S.card}>
+            <div key={f.title} style={S.card} className="card-hover">
               <div style={S.cardIcon}>{f.icon}</div>
               <h3 style={S.cardTitle}>{f.title}</h3>
               <p style={S.cardText}>{f.text}</p>
@@ -175,54 +196,111 @@ export default function Home() {
         <h2 style={S.secTitle}>Descargar</h2>
         <p style={{ textAlign: 'center', color: 'var(--sub)', marginBottom: 32 }}>Versión <strong>v{version}</strong></p>
         <div style={S.dlGrid}>
-          {[
-            { id: 'windows', label: 'Windows', desc: 'Instalador NSIS · x64', ext: '.exe', url: assets.windows, highlight: os === 'windows' },
-            { id: 'mac-x64', label: 'macOS Intel', desc: 'DMG · x64', ext: '.dmg', url: assets.macX64, highlight: os === 'mac-x64' },
-            { id: 'mac-arm', label: 'macOS Apple Silicon', desc: 'DMG · arm64', ext: '.dmg', url: assets.macArm, highlight: os === 'mac-arm' },
-            { id: 'linux', label: 'Linux', desc: 'AppImage · x86_64', ext: '.AppImage', url: assets.linux, highlight: os === 'linux' },
-          ].map(p => (
-            <div key={p.id} style={{ ...S.dlCard, borderColor: p.highlight ? 'var(--accent)' : 'var(--border)' }}>
+          {dlPlatforms.map(p => (
+            <div key={p.id} style={{ ...S.dlCard, borderColor: os === p.id ? 'var(--accent2)' : 'var(--border)', boxShadow: os === p.id ? '0 0 30px rgba(124,58,237,.25)' : 'none' }} className="card-hover">
               <div style={S.platformHeader}>
                 <strong style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 17 }}>{p.label}</strong>
-                {p.highlight && <span style={{ fontSize: 11, background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px' }}>Tu sistema</span>}
+                {os === p.id && <span style={{ fontSize: 11, background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px' }}>← Tu sistema</span>}
               </div>
               <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{p.desc}</p>
               {p.url ? (
-                <a href={p.url} style={S.dlBtn}>
+                <a
+                  href={p.url}
+                  className="dl-btn-outline"
+                  onClick={p.isMac ? openMacGuide : undefined}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Descargar {p.ext}
                 </a>
               ) : (
-                <span style={{ ...S.dlBtn, opacity: .4, cursor: 'not-allowed' }}>No disponible</span>
+                <span className="dl-btn-outline unavailable">No disponible</span>
               )}
             </div>
           ))}
         </div>
 
-        {/* macOS guide */}
-        <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+        {/* macOS guide — full detailed version */}
+        <div id="mac-guide" className={`mac-guide${macFlash ? ' flash' : ''}`} style={{ marginBottom: 24 }}>
           <button
+            className="mac-guide-summary"
             onClick={() => setMacGuideOpen(v => !v)}
-            style={{ width: '100%', padding: '14px 20px', background: 'var(--bg3)', border: 'none', color: 'var(--text)', textAlign: 'left', fontSize: 14, fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
-            <span>🍎 ¿Cómo instalo en macOS? <span style={{ fontSize: 11, background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', marginLeft: 8 }}>¡Léeme!</span></span>
+            <span>
+              🍎 ¿Cómo instalo en macOS?
+              <span className="summary-tag">¡Léeme antes de abrir!</span>
+            </span>
             <span>{macGuideOpen ? '▲' : '▼'}</span>
           </button>
+
           {macGuideOpen && (
-            <div style={{ padding: '20px', fontSize: 14, color: 'var(--sub)', lineHeight: 1.7 }}>
-              <p style={{ marginBottom: 12 }}>macOS bloquea apps sin firma de Apple ($99/año). No está dañada — solo hay que desbloquearla manualmente:</p>
-              <ol style={{ paddingLeft: 20, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <li>Descarga el <strong>.dmg</strong>, ábrelo y arrastra el launcher a <em>Aplicaciones</em>.</li>
-                <li>Intenta abrirlo — macOS dirá que está dañado. Dale OK y ciérralo.</li>
-                <li>Abre <strong>Terminal</strong> (<kbd>⌘ Cmd</kbd> + <kbd>Espacio</kbd> → escribe Terminal) y ejecuta:</li>
-              </ol>
-              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'monospace', fontSize: 13, marginBottom: 12 }}>
+            <div className="mac-guide-body">
+              <div className="mac-warning-box">
+                <span className="warn-icon">⚠️</span>
+                <div>
+                  <strong>¿Por qué macOS dice que la app está dañada?</strong>
+                  <p>
+                    No está dañada para nada. Apple exige pagar <strong>$99 al año</strong> para
+                    "firmar" apps y que macOS las acepte sin drama. Como eso no es plata que todo
+                    el mundo tiene, macOS bloquea la app. Hay que decirle manualmente que confíes
+                    en ella. 👇
+                  </p>
+                </div>
+              </div>
+
+              <div className="mac-steps">
+                <div className="mac-step">
+                  <div className="step-num">1</div>
+                  <div className="step-content">
+                    Descarga el archivo <strong>.dmg</strong> y ábrelo haciendo doble clic.
+                    Se monta como un USB virtual. Arrastra el ícono del launcher a la carpeta
+                    <em> Aplicaciones</em> que aparece al lado. 📂
+                  </div>
+                </div>
+                <div className="mac-step">
+                  <div className="step-num">2</div>
+                  <div className="step-content">
+                    <strong>Expulsa el .dmg</strong> — en el Finder, barra lateral izquierda bajo
+                    "Ubicaciones", clic derecho sobre el disco → <em>Expulsar</em>. O arrástralo
+                    al icono de papelera. 💿➡️🗑️
+                  </div>
+                </div>
+                <div className="mac-step">
+                  <div className="step-num">3</div>
+                  <div className="step-content">
+                    Intenta abrir el launcher desde Aplicaciones. macOS va a decir que
+                    <strong> "ModpackLauncher está dañado y no se puede abrir"</strong>.
+                    Dale <em>OK</em> y cierra ese mensaje. 🚫
+                  </div>
+                </div>
+                <div className="mac-step">
+                  <div className="step-num">4</div>
+                  <div className="step-content">
+                    Abre <strong>Terminal</strong> — <kbd>⌘ Cmd</kbd> + <kbd>Espacio</kbd>,
+                    escribe "Terminal" y presiona <kbd>Enter</kbd>. Luego pega este comando:
+                  </div>
+                </div>
+              </div>
+
+              <div className="mac-code-block">
                 <code>xattr -d com.apple.quarantine /Applications/ModpackLauncher.app</code>
-                <button onClick={copyMacCmd} style={{ marginLeft: 12, padding: '4px 12px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <button className="copy-btn" onClick={copyMacCmd}>
                   {macCopied ? '¡Copiado!' : 'Copiar'}
                 </button>
               </div>
-              <p>4. ¡Listo! Ábrelo desde Aplicaciones. Ya no habrá más mensajes de bloqueo.</p>
+              <p className="mac-tip">
+                🔐 Si te pide contraseña: escríbela aunque no veas nada — así funciona Terminal,
+                es normal. Presiona <kbd>Enter</kbd> cuando termines. Si no muestra ningún error,
+                funcionó perfectamente.
+              </p>
+
+              <div className="mac-step">
+                <div className="step-num">5</div>
+                <div className="step-content">
+                  ¡Listo! Presiona <kbd>⌘ Cmd</kbd> + <kbd>Espacio</kbd>, escribe
+                  <strong> ModpackLauncher</strong> y presiona <kbd>Enter</kbd>. 🚀
+                  Abre normal. La próxima vez ya no hay que hacer nada extra.
+                </div>
+              </div>
             </div>
           )}
         </div>
