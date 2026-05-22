@@ -135,12 +135,15 @@ const eyeBtnStyle = {
 
 function friendlyError(code) {
   const map = {
-    'auth/invalid-credential':    'Email o contraseña incorrectos.',
-    'auth/user-not-found':        'Email o contraseña incorrectos.',
-    'auth/wrong-password':        'Email o contraseña incorrectos.',
-    'auth/too-many-requests':     'Demasiados intentos fallidos. Espera unos minutos o usa "¿Olvidaste tu contraseña?"',
-    'auth/network-request-failed':'Error de red. Comprueba tu conexión.',
-    'auth/missing-email':         'Escribe tu email primero.',
+    'auth/invalid-credential':              'Email o contraseña incorrectos.',
+    'auth/user-not-found':                  'Email o contraseña incorrectos.',
+    'auth/wrong-password':                  'Email o contraseña incorrectos.',
+    'auth/account-exists-with-different-credential': 'Ya existe una cuenta con ese email usando Google. Usa "Entrar con Google".',
+    'auth/too-many-requests':               'Demasiados intentos fallidos. Espera unos minutos o usa "¿Olvidaste tu contraseña?"',
+    'auth/network-request-failed':          'Error de red. Comprueba tu conexión.',
+    'auth/missing-email':                   'Escribe tu email primero.',
+    'auth/popup-closed-by-user':            'Ventana cerrada antes de completar el inicio de sesión.',
+    'auth/popup-blocked':                   'El navegador bloqueó la ventana. Permite popups para este sitio.',
   }
   return map[code] ?? `Error: ${code}`
 }
