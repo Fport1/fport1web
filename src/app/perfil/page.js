@@ -160,8 +160,8 @@ export default function PerfilPage() {
       batch.delete(doc(db, 'friendRequests', req.id))
       await batch.commit()
       setActionMsg({ type: 'ok', text: `Ahora eres amigo de ${req.fromProfileName}.` })
-    } catch {
-      setActionMsg({ type: 'err', text: 'Error al aceptar.' })
+    } catch (err) {
+      setActionMsg({ type: 'err', text: `Error al aceptar: ${err?.code ?? err?.message ?? 'desconocido'}` })
     }
   }
 

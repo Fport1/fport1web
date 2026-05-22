@@ -68,6 +68,7 @@ function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [serverError, setServerError] = useState('')
+  const [googleError, setGoogleError] = useState('')
 
   // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'error'
   const [emailStatus, setEmailStatus]   = useState('idle')
@@ -132,7 +133,7 @@ function RegisterPage() {
     passLenOk && passMatch && aceptaOk && !loading
 
   async function handleGoogle() {
-    setServerError(''); setGoogleLoading(true)
+    setGoogleError(''); setGoogleLoading(true)
     try {
       const result = await signInWithPopup(auth, new GoogleAuthProvider())
       const snap = await getDoc(doc(db, 'users', result.user.uid))
@@ -142,10 +143,13 @@ function RegisterPage() {
         router.push('/registro/completar')
       }
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setServerError(friendlyError(err.code))
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setGoogleLoading(false)
+        return
       }
-    } finally { setGoogleLoading(false) }
+      setGoogleError(friendlyError(err.code))
+      setGoogleLoading(false)
+    }
   }
 
   async function onSubmit(e) {
@@ -216,10 +220,16 @@ function RegisterPage() {
           ¿Ya tienes cuenta? <Link href="/login" style={{ color: 'var(--accent2)' }}>Inicia sesión</Link>
         </p>
 
-        <button onClick={handleGoogle} disabled={loading} className="auth-google-btn">
+        <button onClick={handleGoogle} disabled={loading || googleLoading} className="auth-google-btn">
           <GoogleLogo />
           Registrarse con Google
         </button>
+
+        {googleError && (
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 13, marginTop: 12 }}>
+            {googleError}
+          </div>
+        )}
 
         <Divider />
 
@@ -451,10 +461,13 @@ const eyeBtn = {
 
 function friendlyError(code) {
   const map = {
-    'auth/email-already-in-use':  'Ya existe una cuenta con ese email.',
-    'auth/weak-password':         'La contraseña es muy débil.',
-    'auth/invalid-email':         'El email no es válido.',
-    'auth/network-request-failed':'Error de red.',
+    'auth/email-already-in-use':                  'Ya existe una cuenta con ese email.',
+    'auth/account-exists-with-different-credential': 'Ese email ya está registrado con otro método (email/contraseña). Inicia sesión con email y vincula Google desde tu perfil.',
+    'auth/weak-password':                          'La contraseña es muy débil.',
+    'auth/invalid-email':                          'El email no es válido.',
+    'auth/network-request-failed':                 'Error de red.',
+    'auth/popup-blocked':                          'El navegador bloqueó la ventana emergente. Permite las ventanas emergentes para este sitio.',
+    'auth/unauthorized-domain':                    'Este dominio no está autorizado en Firebase. Contacta al administrador.',
   }
-  return map[code] ?? `Error: ${code}`
+  return map[code] ?? `Error inesperado: ${code}`
 }

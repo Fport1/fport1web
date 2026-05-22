@@ -30,13 +30,13 @@ export default function Nav() {
 
   // Save current account to localStorage
   useEffect(() => {
-    if (!user || !profile) return
+    if (!user) return
     const accounts = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]')
     const entry = {
       uid: user.uid,
-      profileName: profile.profileName || profile.username || 'Sin nombre',
-      username: profile.username || null,
-      photoURL: profile.photoURL || null,
+      profileName: profile?.profileName || profile?.username?.replace(/^@/, '') || user.displayName || user.email?.split('@')[0] || 'Sin nombre',
+      username: profile?.username || null,
+      photoURL: profile?.photoURL || user.photoURL || null,
       email: user.email || null,
       provider: user.providerData?.[0]?.providerId || 'password',
     }
@@ -206,6 +206,16 @@ export default function Nav() {
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       Social
+                    </Link>
+
+                    {/* Mensajes */}
+                    <Link href="/mensajes" onClick={() => setOpen(false)}
+                      style={{ ...itemStyle, textDecoration: 'none', display: 'flex' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--text)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sub)' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      Mensajes
                     </Link>
 
                     <div style={{ height: 1, background: 'var(--border)', margin: '3px 4px' }} />
