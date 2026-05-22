@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   signInWithEmailAndPassword,
@@ -10,10 +10,16 @@ import {
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
+
+  useEffect(() => {
+    const pre = params.get('email')
+    if (pre) setEmail(decodeURIComponent(pre))
+  }, [])
   const [showPass, setShowPass]   = useState(false)
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
@@ -106,4 +112,12 @@ function friendlyError(code) {
     'auth/network-request-failed':'Error de red. Comprueba tu conexión.',
   }
   return map[code] ?? `Error: ${code}`
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+      <LoginForm />
+    </Suspense>
+  )
 }

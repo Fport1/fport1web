@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 
 const ACCOUNTS_KEY = 'fport1_accounts'
 
@@ -37,6 +39,8 @@ export default function Nav() {
       profileName: profile.profileName || profile.username || 'Sin nombre',
       username: profile.username || null,
       photoURL: profile.photoURL || null,
+      email: user.email || null,
+      provider: user.providerData?.[0]?.providerId || 'password',
     }
     const idx = accounts.findIndex(a => a.uid === user.uid)
     if (idx >= 0) accounts[idx] = entry
@@ -61,10 +65,22 @@ export default function Nav() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  async function switchAccount() {
+  async function switchAccount(acc) {
     setOpen(false)
     await signOut()
-    router.push('/login')
+    if (acc.provider === 'google.com') {
+      try {
+        const provider = new GoogleAuthProvider()
+        if (acc.email) provider.setCustomParameters({ login_hint: acc.email })
+        await signInWithPopup(auth, provider)
+        router.push('/perfil')
+      } catch {
+        router.push('/login')
+      }
+    } else {
+      const q = acc.email ? `?email=${encodeURIComponent(acc.email)}` : ''
+      router.push(`/login${q}`)
+    }
   }
 
   async function addAccount() {
@@ -154,7 +170,7 @@ export default function Nav() {
                       <>
                         <div style={{ height: 1, background: 'var(--border)', margin: '3px 4px' }} />
                         {savedAccounts.map(acc => (
-                          <button key={acc.uid} onClick={switchAccount}
+                          <button key={acc.uid} onClick={() => switchAccount(acc)}
                             style={{ ...itemStyle, position: 'relative' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--text)' }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sub)' }}

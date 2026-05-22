@@ -7,8 +7,7 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   updateProfile,
   deleteUser,
 } from 'firebase/auth'
@@ -77,27 +76,6 @@ function RegisterPage() {
   const update = (field, value) => setForm(f => ({ ...f, [field]: value }))
   const touch  = (field) => setTouched(t => ({ ...t, [field]: true }))
 
-  // Handle redirect result from Google sign-in
-  useEffect(() => {
-    setGoogleLoading(true)
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (!result) return
-        // Check if user already has a profile
-        const snap = await getDoc(doc(db, 'users', result.user.uid))
-        if (snap.exists() && snap.data().usernameSlug) {
-          router.push('/perfil')
-        } else {
-          router.push('/registro/completar')
-        }
-      })
-      .catch((err) => {
-        if (err.code !== 'auth/cancelled-popup-request') {
-          setServerError(friendlyError(err.code))
-        }
-      })
-      .finally(() => setGoogleLoading(false))
-  }, [])
 
   const emailNorm      = form.email.trim().toLowerCase()
   const emailFormatOk  = /\S+@\S+\.\S+/.test(emailNorm)
@@ -153,9 +131,21 @@ function RegisterPage() {
     emailFormatOk && emailStatus === 'available' &&
     passLenOk && passMatch && aceptaOk && !loading
 
-  function handleGoogle() {
-    setServerError('')
-    signInWithRedirect(auth, new GoogleAuthProvider())
+  async function handleGoogle() {
+    setServerError(''); setGoogleLoading(true)
+    try {
+      const result = await signInWithPopup(auth, new GoogleAuthProvider())
+      const snap = await getDoc(doc(db, 'users', result.user.uid))
+      if (snap.exists() && snap.data().usernameSlug) {
+        router.push('/perfil')
+      } else {
+        router.push('/registro/completar')
+      }
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        setServerError(friendlyError(err.code))
+      }
+    } finally { setGoogleLoading(false) }
   }
 
   async function onSubmit(e) {
