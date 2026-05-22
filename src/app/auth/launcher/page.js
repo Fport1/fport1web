@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth'
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import {
@@ -157,89 +157,72 @@ function ProfileForm({ user, onDone }) {
 
 function LauncherAuthInner() {
   const searchParams   = useSearchParams()
-  const sessionCode    = searchParams.get('code') // short code from launcher
+  const sessionCode    = searchParams.get('code')
 
-  const [status,      setStatus]  = useState('checking')
+  const [status,      setStatus]  = useState('idle')
   const [error,       setError]   = useState('')
   const [credential,  setCred]    = useState(null)
   const [firebaseUser,setFbUser]  = useState(null)
 
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (!result) { setStatus('idle'); return }
-
-        const cred = GoogleAuthProvider.credentialFromResult(result)
-        if (!cred?.idToken) throw new Error('No se pudo obtener las credenciales de Google.')
-
-        setCred(cred)
-        setFbUser(result.user)
-
-        // Check if user already has a profile
-        const snap = await getDoc(doc(db, 'users', result.user.uid))
-        if (snap.exists() && snap.data().usernameSlug) {
-          setStatus('writing') // profile complete → write session and notify launcher
-        } else {
-          setStatus('profile-needed')
-        }
-      })
-      .catch((err) => {
-        setError(err.message || 'Ocurrió un error')
-        setStatus('error')
-      })
-  }, [])
-
-  // Write the session to Firestore so the launcher can pick it up via onSnapshot
   async function notifyLauncher(cred) {
     if (!cred?.idToken) { setError('Sin credenciales. Intenta de nuevo.'); setStatus('error'); return }
-
-    // sessionCode may be gone from URL after Google redirect — fall back to sessionStorage
-    const code = sessionCode || sessionStorage.getItem('launcher_code')
-
     try {
-      if (code) {
-        await setDoc(doc(db, 'launcher_sessions', code), {
+      if (sessionCode) {
+        await setDoc(doc(db, 'launcher_sessions', sessionCode), {
           idToken:     cred.idToken,
           accessToken: cred.accessToken ?? '',
           createdAt:   serverTimestamp(),
         })
-        sessionStorage.removeItem('launcher_code')
       }
       setStatus('done')
-    } catch(err) {
+    } catch (err) {
       setError(err.message ?? 'No se pudo notificar al launcher.')
       setStatus('error')
     }
   }
 
-  // Call notifyLauncher only once when we have both status=writing AND credential
   useEffect(() => {
     if (status === 'writing' && credential) notifyLauncher(credential)
   }, [status, credential])
 
-  // Profile form done → just transition to writing, useEffect handles the rest
-  function onProfileDone() {
-    setStatus('writing')
-  }
+  function onProfileDone() { setStatus('writing') }
 
-  function handleGoogle() {
+  async function handleGoogle() {
     setError('')
     setStatus('redirecting')
-    // Store code in sessionStorage — Google redirect clears URL params
-    if (sessionCode) sessionStorage.setItem('launcher_code', sessionCode)
-    signInWithRedirect(auth, new GoogleAuthProvider())
+    try {
+      const result = await signInWithPopup(auth, new GoogleAuthProvider())
+      const cred = GoogleAuthProvider.credentialFromResult(result)
+      if (!cred?.idToken) throw new Error('No se pudo obtener las credenciales de Google.')
+
+      setCred(cred)
+      setFbUser(result.user)
+
+      const snap = await getDoc(doc(db, 'users', result.user.uid))
+      if (snap.exists() && snap.data().usernameSlug) {
+        setStatus('writing')
+      } else {
+        setStatus('profile-needed')
+      }
+    } catch (err) {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setStatus('idle')
+      } else {
+        setError(err.message || 'Error al iniciar sesión con Google.')
+        setStatus('error')
+      }
+    }
   }
 
-  // Recover code from sessionStorage after redirect (Google clears URL params)
-  const effectiveCode = sessionCode || (typeof window !== 'undefined' ? sessionStorage.getItem('launcher_code') : null)
+  const effectiveCode = sessionCode
 
   // Loading states
-  if (status === 'checking' || status === 'redirecting' || status === 'writing') {
+  if (status === 'redirecting' || status === 'writing') {
     return (
       <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, background:'var(--bg)' }}>
         <Spinner size={32} />
         <p style={{ fontSize:14, color:'var(--sub)', margin:0, animation:'pulse 1.5s ease infinite' }}>
-          {status === 'checking' ? 'Verificando sesión…' : status === 'redirecting' ? 'Redirigiendo a Google…' : 'Conectando con el launcher…'}
+          {status === 'redirecting' ? 'Esperando Google…' : 'Conectando con el launcher…'}
         </p>
       </div>
     )
