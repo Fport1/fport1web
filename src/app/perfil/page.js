@@ -1,15 +1,14 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
   collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch,
-  query, where, orderBy, onSnapshot, addDoc, serverTimestamp, limit,
+  query, where, orderBy, onSnapshot, serverTimestamp, limit,
 } from 'firebase/firestore'
 
-function chatId(a, b) { return [a, b].sort().join('_') }
 function stripAt(s) { return s ? s.replace(/^@/, '') : s }
 
 function Avatar({ src, name, size = 36 }) {
@@ -37,16 +36,11 @@ export default function PerfilPage() {
   const [presence, setPresence]     = useState({})
   const [requests, setRequests]     = useState([])
   const [outgoing, setOutgoing]     = useState([])
-  const [chats, setChats]           = useState([])
-  const [openChatId, setOpenChatId] = useState(null)
-  const [messages, setMessages]     = useState([])
-  const [msgText, setMsgText]       = useState('')
   const [searchQ, setSearchQ]       = useState('')
   const [searchResult, setSearchResult] = useState(null)
   const [searching, setSearching]   = useState(false)
   const [actionMsg, setActionMsg]   = useState(null)
   const [copyFriendLink, setCopyFriendLink] = useState(false)
-  const msgEndRef = useRef(null)
 
   useEffect(() => {
     if (!authLoading && !switching && !user) router.push('/login')
@@ -83,23 +77,6 @@ export default function PerfilPage() {
     const unsub = onSnapshot(q, snap => setOutgoing(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
     return () => unsub()
   }, [user])
-
-  useEffect(() => {
-    if (!user) return
-    const q = query(collection(db, 'chats'), where('members', 'array-contains', user.uid), orderBy('lastMessageAt', 'desc'))
-    const unsub = onSnapshot(q, snap => setChats(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-    return () => unsub()
-  }, [user])
-
-  useEffect(() => {
-    if (!openChatId) return
-    const q = query(collection(db, 'chats', openChatId, 'messages'), orderBy('createdAt', 'asc'), limit(100))
-    const unsub = onSnapshot(q, snap => {
-      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-      setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    })
-    return () => unsub()
-  }, [openChatId])
 
   useEffect(() => {
     const norm = searchQ.trim().toLowerCase().replace(/^@/, '').replace(/\s+/g, '')
@@ -176,41 +153,6 @@ export default function PerfilPage() {
     await batch.commit()
   }
 
-  async function openChat(friendUid) {
-    const cid = chatId(user.uid, friendUid)
-    const friend = friends.find(f => f.uid === friendUid)
-    const chatRef = doc(db, 'chats', cid)
-    const snap = await getDoc(chatRef)
-    if (!snap.exists()) {
-      const myName = profile?.profileName || stripAt(profile?.username) || 'Tú'
-      const theirName = friend?.profileName || friend?.usernameSlug || '?'
-      await setDoc(chatRef, {
-        members: [user.uid, friendUid].sort(),
-        memberNames: { [user.uid]: myName, [friendUid]: theirName },
-        createdAt: serverTimestamp(),
-        lastMessageAt: serverTimestamp(),
-        lastMessage: '',
-      })
-    }
-    setOpenChatId(cid)
-    setTab('chat')
-  }
-
-  async function sendMessage(e) {
-    e.preventDefault()
-    if (!msgText.trim() || !openChatId) return
-    const text = msgText.trim()
-    setMsgText('')
-    const chatRef = doc(db, 'chats', openChatId)
-    await addDoc(collection(db, 'chats', openChatId, 'messages'), {
-      sender: user.uid,
-      senderName: profile?.profileName || stripAt(profile?.username) || 'Tú',
-      text,
-      createdAt: serverTimestamp(),
-    })
-    await setDoc(chatRef, { lastMessage: text, lastMessageAt: serverTimestamp() }, { merge: true })
-  }
-
   function copyMyLink() {
     const url = `${window.location.origin}/perfil/${user.uid}`
     navigator.clipboard.writeText(url)
@@ -242,7 +184,7 @@ export default function PerfilPage() {
       </div>
 
       <div className="profile-tabs">
-        {[['friends', 'Amigos'], ['requests', 'Solicitudes'], ['add', 'Añadir'], ['chat', 'Chat']].map(([key, label]) => (
+        {[['friends', 'Amigos'], ['requests', 'Solicitudes'], ['add', 'Añadir']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`profile-tab${tab === key ? ' active' : ''}`} style={{ position: 'relative' }}>
             {label}
             {key === 'requests' && requests.length > 0 && (
@@ -252,6 +194,9 @@ export default function PerfilPage() {
             )}
           </button>
         ))}
+        <button onClick={() => router.push('/mensajes')} className="profile-tab" style={{ position: 'relative' }}>
+          Mensajes
+        </button>
       </div>
 
       {actionMsg && (
@@ -281,7 +226,7 @@ export default function PerfilPage() {
                     {p?.playing ? '🎮 Jugando ahora' : p?.online ? '🟢 En línea' : '⚫ Desconectado'}
                   </p>
                 </div>
-                <button onClick={() => openChat(f.uid)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Chat</button>
+                <button onClick={() => router.push(`/mensajes?u=${f.uid}`)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Chat</button>
                 <button onClick={() => removeFriend(f.uid)} title="Eliminar amigo"
                   style={{ padding: '6px 10px', borderRadius: 8, background: 'none', border: '1px solid transparent', color: 'var(--muted)', cursor: 'pointer', transition: 'all .15s', display: 'flex', alignItems: 'center' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = '#f87171' }}
@@ -375,53 +320,6 @@ export default function PerfilPage() {
         </div>
       )}
 
-      {/* CHAT */}
-      {tab === 'chat' && (
-        <div style={{ display: 'flex', height: 500, border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ width: 220, borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg2)' }}>
-            {chats.length === 0 && <p style={{ padding: 16, fontSize: 13, color: 'var(--muted)' }}>Sin conversaciones aún.</p>}
-            {chats.map(c => {
-              const otherUid = c.members.find(m => m !== user.uid)
-              const name = c.memberNames?.[otherUid] ?? 'Desconocido'
-              return (
-                <button key={c.id} onClick={() => setOpenChatId(c.id)} style={{ width: '100%', textAlign: 'left', padding: '12px 14px', background: openChatId === c.id ? 'var(--card)' : 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{name}</p>
-                  <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.lastMessage || '…'}</p>
-                </button>
-              )
-            })}
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {!openChatId ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 14 }}>
-                Selecciona un chat de la lista
-              </div>
-            ) : (
-              <>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {messages.map(m => {
-                    const mine = m.sender === user.uid
-                    return (
-                      <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
-                        <div style={{ maxWidth: '70%', padding: '8px 12px', borderRadius: 12, background: mine ? 'var(--accent)' : 'var(--card)', color: '#fff', fontSize: 13, lineHeight: 1.5 }}>
-                          {!mine && <p style={{ fontSize: 10, color: 'rgba(255,255,255,.5)', margin: '0 0 2px' }}>{m.senderName}</p>}
-                          {m.text}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  <div ref={msgEndRef} />
-                </div>
-                <form onSubmit={sendMessage} style={{ display: 'flex', gap: 8, padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
-                  <input value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Escribe un mensaje..."
-                    style={{ flex: 1, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-                  <button type="submit" style={{ padding: '9px 16px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Enviar</button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
