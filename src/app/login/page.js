@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
@@ -23,6 +24,8 @@ function LoginForm() {
   const [showPass, setShowPass]   = useState(false)
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
 
   async function handleEmail(e) {
     e.preventDefault()
@@ -33,6 +36,17 @@ function LoginForm() {
     } catch (err) {
       setError(friendlyError(err.code))
     } finally { setLoading(false) }
+  }
+
+  async function handleReset() {
+    if (!email) { setError('Escribe tu email primero.'); return }
+    setResetLoading(true); setError('')
+    try {
+      await sendPasswordResetEmail(auth, email)
+      setResetSent(true)
+    } catch (err) {
+      setError(friendlyError(err.code))
+    } finally { setResetLoading(false) }
   }
 
   async function handleGoogle() {
@@ -84,9 +98,25 @@ function LoginForm() {
               )}
             </button>
           </div>
-          {error && <p style={{ color: '#f87171', fontSize: 13 }}>{error}</p>}
+          {error && (
+            <div>
+              <p style={{ color: '#f87171', fontSize: 13 }}>{error}</p>
+              {error.includes('incorrectos') && (
+                <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                  Si te registraste con Google, usa el botón de arriba.
+                </p>
+              )}
+            </div>
+          )}
+          {resetSent && <p style={{ color: '#4ade80', fontSize: 13 }}>Email de recuperación enviado. Revisa tu bandeja.</p>}
           <button type="submit" disabled={loading} className="auth-submit-btn">
             {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+          <button type="button" onClick={handleReset} disabled={resetLoading}
+            style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer', textAlign: 'center', padding: '4px 0', transition: 'color .15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent2)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+            {resetLoading ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
           </button>
         </form>
       </div>
@@ -106,10 +136,11 @@ const eyeBtnStyle = {
 function friendlyError(code) {
   const map = {
     'auth/invalid-credential':    'Email o contraseña incorrectos.',
-    'auth/user-not-found':        'No existe ninguna cuenta con ese email.',
-    'auth/wrong-password':        'Contraseña incorrecta.',
-    'auth/too-many-requests':     'Demasiados intentos. Espera un momento.',
+    'auth/user-not-found':        'Email o contraseña incorrectos.',
+    'auth/wrong-password':        'Email o contraseña incorrectos.',
+    'auth/too-many-requests':     'Demasiados intentos fallidos. Espera unos minutos o usa "¿Olvidaste tu contraseña?"',
     'auth/network-request-failed':'Error de red. Comprueba tu conexión.',
+    'auth/missing-email':         'Escribe tu email primero.',
   }
   return map[code] ?? `Error: ${code}`
 }
