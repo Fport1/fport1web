@@ -30,7 +30,7 @@ function minecraftHead(uuid) {
 
 export default function PerfilPage() {
   const router = useRouter()
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading, switching } = useAuth()
 
   const [tab, setTab]               = useState('friends')
   const [friends, setFriends]       = useState([])
@@ -49,7 +49,7 @@ export default function PerfilPage() {
   const msgEndRef = useRef(null)
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login')
+    if (!authLoading && !switching && !user) router.push('/login')
   }, [authLoading, user, router])
 
   useEffect(() => {

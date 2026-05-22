@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
 
 const ACCOUNTS_KEY = 'fport1_accounts'
 
@@ -25,7 +23,7 @@ function MiniAvatar({ photoURL, name, size = 22 }) {
 
 export default function Nav() {
   const router = useRouter()
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading, switching, signOut, switchToGoogle } = useAuth()
   const [open, setOpen] = useState(false)
   const [savedAccounts, setSavedAccounts] = useState([])
   const ref = useRef(null)
@@ -67,17 +65,13 @@ export default function Nav() {
 
   async function switchAccount(acc) {
     setOpen(false)
-    await signOut()
     if (acc.provider === 'google.com') {
       try {
-        const provider = new GoogleAuthProvider()
-        if (acc.email) provider.setCustomParameters({ login_hint: acc.email })
-        await signInWithPopup(auth, provider)
+        await switchToGoogle(acc.email)
         router.push('/perfil')
-      } catch {
-        router.push('/login')
-      }
+      } catch { /* cancelled */ }
     } else {
+      await signOut()
       const q = acc.email ? `?email=${encodeURIComponent(acc.email)}` : ''
       router.push(`/login${q}`)
     }
@@ -123,7 +117,7 @@ export default function Nav() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <Link href="/#launcher" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Launcher</Link>
 
-          {!loading && (
+          {!loading && !switching && (
             user ? (
               <div ref={ref} style={{ position: 'relative' }}>
                 <button
