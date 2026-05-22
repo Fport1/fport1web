@@ -222,7 +222,16 @@ const IconMore = p => (
   </svg>
 )
 function Avatar({ src, alt = '', size = 36 }) {
-  return <img src={src || '/favicon.ico'} alt={alt} className="rounded-full border border-[var(--border)] object-cover" style={{ width: size, height: size }} />
+  const [err, setErr] = useState(false)
+  const initial = alt ? alt.trim()[0].toUpperCase() : '?'
+  if (src && !err) {
+    return <img src={src} alt={alt} onError={() => setErr(true)} className="rounded-full border border-[var(--border)] object-cover shrink-0" style={{ width: size, height: size }} />
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+      {initial}
+    </div>
+  )
 }
 function Chip({ active, children, onClick }) {
   return (

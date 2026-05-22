@@ -8,6 +8,7 @@ import {
   collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp, limit,
 } from 'firebase/firestore'
+import PerfilNav from '@/components/PerfilNav'
 
 function stripAt(s) { return s ? s.replace(/^@/, '') : s }
 
@@ -170,7 +171,10 @@ export default function PerfilPage() {
   const outgoingUids = new Set(outgoing.map(r => r.toUid))
 
   return (
-    <div className="profile-page">
+    <div className="mx-auto max-w-7xl px-4 pt-[76px] pb-6 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
+      <aside className="hidden md:block md:sticky md:top-20 h-fit"><PerfilNav /></aside>
+
+      <div>
 
       <div className="profile-header">
         <Avatar src={myAvatar} name={myName} size={52} />
@@ -320,6 +324,7 @@ export default function PerfilPage() {
         </div>
       )}
 
+      </div>
     </div>
   )
 }
