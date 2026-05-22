@@ -31,9 +31,12 @@ service cloud.firestore {
 
     match /friendRequests/{reqId} {
       allow create: if request.auth != null && request.resource.data.fromUid == request.auth.uid;
-      allow read:   if request.auth != null && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      // Split read rules so Firestore can verify each from query constraints
+      allow read: if request.auth != null && resource.data.fromUid == request.auth.uid;
+      allow read: if request.auth != null && resource.data.toUid   == request.auth.uid;
       allow update: if request.auth != null && resource.data.toUid == request.auth.uid;
-      allow delete: if request.auth != null && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow delete: if request.auth != null && resource.data.fromUid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.toUid   == request.auth.uid;
     }
 
     match /chats/{chatId} {
