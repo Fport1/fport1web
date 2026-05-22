@@ -1026,13 +1026,15 @@ function MensajesPageContent() {
         <aside className={clsx('border border-[var(--border)] bg-[var(--card)] rounded-2xl p-3 flex flex-col h-full overflow-hidden', mobileView === 'list' ? 'block' : 'hidden', 'lg:block')}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">Chatear</h2>
+            <button onClick={() => setOpenNew(true)} className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center cursor-pointer transition hover:bg-white/10" title="Nuevo chat">
+              <PlusIcon className="w-4 h-4" />
+            </button>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <div className="flex-1 relative">
               <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60" />
               <input className="w-full rounded-full border border-[var(--border)] pl-9 pr-4 py-2 text-sm bg-transparent" placeholder="Buscar" />
             </div>
-            <button onClick={() => setOpenNew(true)} className="w-10 h-10 rounded-full border border-[var(--border)] text-xl leading-none cursor-pointer transition hover:bg-white/10" title="Nuevo chat">+</button>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <Chip active={convFilter === 'all'} onClick={() => setConvFilter('all')}>Todas</Chip>
@@ -1340,22 +1342,6 @@ function MensajesPageContent() {
 
       {forwardingMsg && <ForwardModal msg={forwardingMsg} convos={convos} userMap={userMap} userUid={user?.uid} db={db} onClose={() => setForwardingMsg(null)} />}
 
-      <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-2">
-        {SHOW_INVITE && (
-          <div className="relative inline-block">
-            <button onClick={async () => {
-              const token = myChatLinkToken || await fetchOrCreateMyChatLink()
-              if (!token) return
-              try { await navigator.clipboard.writeText(chatLinkUrl(token)); setShowToast(true); setTimeout(() => setShowToast(false), 2000) }
-              catch (e) { console.warn('Error copiando enlace', e) }
-            }} className="inline-flex items-center gap-2 rounded-full bg-violet-500 text-black px-4 py-2 shadow-lg hover:brightness-95 transition cursor-pointer" title="Mi enlace de chat">
-              <LinkIcon className="h-5 w-5" />
-              Mi enlace de chat
-            </button>
-            {showToast && <div className="absolute -top-10 right-0 bg-black/90 text-white text-xs px-3 py-1 rounded-md border border-[var(--border)] shadow-lg">Enlace copiado ✅</div>}
-          </div>
-        )}
-      </div>
     </div>
   )
 }
