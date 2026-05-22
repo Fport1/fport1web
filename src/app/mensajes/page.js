@@ -36,14 +36,14 @@ function ShareCard({ meta }) {
   const subtitle = isFolder ? `${meta.count ?? 0} propuestas` : (meta.norma || '')
   const actionText = isFolder ? 'Ver carpeta →' : 'Ver propuesta →'
   return (
-    <Link href={href} className="mt-1 flex items-start gap-2.5 rounded-xl bg-white/8 border border-white/10 p-3 hover:bg-white/12 transition" onClick={e => e.stopPropagation()}>
+    <Link href={href} className="mt-1 flex items-start gap-2.5 rounded-xl bg-white/8 border border-[var(--border)] p-3 hover:bg-white/12 transition" onClick={e => e.stopPropagation()}>
       <div className="shrink-0 p-1.5 bg-white/10 rounded-lg mt-0.5">
         {isFolder ? <FolderOpenIcon className="w-4 h-4 text-white/60" /> : <DocumentTextIcon className="w-4 h-4 text-white/60" />}
       </div>
       <div className="min-w-0">
         <p className="text-sm font-medium truncate">{title}</p>
         {subtitle && <p className="text-xs text-white/50">{subtitle}</p>}
-        <p className="text-xs text-blue-400 mt-1">{actionText}</p>
+        <p className="text-xs text-[var(--accent2)] mt-1">{actionText}</p>
       </div>
     </Link>
   )
@@ -222,11 +222,11 @@ const IconMore = p => (
   </svg>
 )
 function Avatar({ src, alt = '', size = 36 }) {
-  return <img src={src || '/favicon.ico'} alt={alt} className="rounded-full border border-white/10 object-cover" style={{ width: size, height: size }} />
+  return <img src={src || '/favicon.ico'} alt={alt} className="rounded-full border border-[var(--border)] object-cover" style={{ width: size, height: size }} />
 }
 function Chip({ active, children, onClick }) {
   return (
-    <button onClick={onClick} className={`px-3 py-1 rounded-full text-xs border border-white/10 cursor-pointer transition ${active ? 'bg-white/10' : 'hover:bg-white/10'}`}>
+    <button onClick={onClick} className={`px-3 py-1 rounded-full text-xs border border-[var(--border)] cursor-pointer transition ${active ? 'bg-white/10' : 'hover:bg-white/10'}`}>
       {children}
     </button>
   )
@@ -421,7 +421,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
         <ExclamationCircleIcon className="w-3.5 h-3.5" />
       </button>
     )
-    if (status === 'read') return <span className="ml-1 text-[11px] text-blue-400 leading-none select-none">✓✓</span>
+    if (status === 'read') return <span className="ml-1 text-[11px] text-[var(--accent2)] leading-none select-none">✓✓</span>
     return <CheckIcon className="w-3.5 h-3.5 ml-1 opacity-50" />
   }
 
@@ -429,14 +429,14 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
     <div className={`w-full flex ${hasAnyReaction ? 'mb-6' : 'mb-2'} ${mine ? 'justify-end' : 'justify-start'} ${selectMode ? 'cursor-pointer' : ''}`} onClick={selectMode ? onSelect : undefined}>
       {selectMode && (
         <div className={`flex items-center ${mine ? 'order-last ml-2' : 'mr-2'}`}>
-          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${selected ? 'bg-blue-500 border-blue-500' : 'border-white/30'}`}>
+          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-white/30'}`}>
             {selected && <CheckIcon className="w-3 h-3 text-white" />}
           </div>
         </div>
       )}
       <div className="relative flex items-start">
         <div ref={bubbleRef} data-bubble="true"
-          className={`relative group inline-flex flex-col whitespace-pre-wrap ${mine ? 'bg-blue-600 text-white ml-auto' : 'bg-neutral-800 text-neutral-100 mr-auto'} w-fit text-[14px] leading-5 ${selected ? 'ring-2 ring-blue-400' : ''} chat-slide-in`}
+          className={`relative group inline-flex flex-col whitespace-pre-wrap ${mine ? 'bg-[var(--accent)] text-white ml-auto' : 'bg-[var(--bg3)] text-neutral-100 mr-auto'} w-fit text-[14px] leading-5 ${selected ? 'ring-2 ring-[var(--accent2)]' : ''} chat-slide-in`}
           onDoubleClick={handleDoubleClick} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
           style={{ borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', maxWidth: 'min(520px, 70%)', minWidth: editing ? '270px' : '120px', overflowWrap: 'break-word', wordBreak: 'normal', hyphens: 'none', transform: swipeOffset ? `translateX(${mine ? -swipeOffset : swipeOffset}px)` : undefined, transition: swipeOffset ? 'none' : 'transform .18s ease-out' }}>
           {floatingHearts.map(h => <span key={h.id} className="chat-float-heart" style={{ left: h.x - 14, top: h.y - 14 }} aria-hidden>❤️</span>)}
@@ -452,8 +452,8 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
             </div>
           )}
           {replyTo && (
-            <button type="button" className={clsx('flex items-stretch rounded-t-xl overflow-hidden -mx-0 border-b w-full text-left transition-opacity hover:opacity-80 active:opacity-60 cursor-pointer', mine ? 'border-blue-400/30' : 'border-white/10')} onClick={() => onJumpToReply?.(replyTo.id)}>
-              <div className={`w-1 flex-shrink-0 ${mine ? 'bg-white/60' : 'bg-blue-400'}`} />
+            <button type="button" className={clsx('flex items-stretch rounded-t-xl overflow-hidden -mx-0 border-b w-full text-left transition-opacity hover:opacity-80 active:opacity-60 cursor-pointer', mine ? 'border-[var(--accent)]/30' : 'border-[var(--border)]')} onClick={() => onJumpToReply?.(replyTo.id)}>
+              <div className={`w-1 flex-shrink-0 ${mine ? 'bg-white/60' : 'bg-[var(--accent2)]'}`} />
               <div className="px-3 py-2 text-[12px] opacity-75 leading-snug max-h-10 overflow-hidden">
                 <span className="font-semibold block">{replyTo.senderName}</span>
                 <span className="truncate block">{replyTo.text || '📎 adjunto'}</span>
@@ -485,7 +485,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
           <>
             <div className="fixed inset-0 z-40 cursor-default" aria-hidden="true" onClick={() => setMenuOpen(false)} />
             <div ref={menuRef}
-              className={clsx('fixed z-50 w-44 rounded-xl border border-white/10 bg-neutral-900/95 backdrop-blur shadow-lg p-1 transform-gpu transition-[opacity,transform] duration-150', mine ? 'origin-right' : 'origin-left')}
+              className={clsx('fixed z-50 w-44 rounded-xl border border-[var(--border)] bg-[var(--bg2)]/95 backdrop-blur shadow-lg p-1 transform-gpu transition-[opacity,transform] duration-150', mine ? 'origin-right' : 'origin-left')}
               role="menu" tabIndex={-1} style={{ top: menuCoords.top, left: menuCoords.left }}>
               <MenuItem icon={ClipboardIcon} label="Copiar" onClick={handleCopy} />
               <MenuItem icon={FaceSmileIcon} label="Reaccionar" onClick={openReactPopover} />
@@ -501,7 +501,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
         {reactOpen && (
           <>
             <div className="fixed inset-0 z-40" aria-hidden="true" onClick={() => setReactOpen(false)} />
-            <div className="fixed z-50 rounded-full border border-white/10 bg-neutral-900/95 backdrop-blur shadow-lg px-2 py-1 flex items-center gap-0.5" style={{ top: reactCoords.top, left: reactCoords.left }}>
+            <div className="fixed z-50 rounded-full border border-[var(--border)] bg-[var(--bg2)]/95 backdrop-blur shadow-lg px-2 py-1 flex items-center gap-0.5" style={{ top: reactCoords.top, left: reactCoords.left }}>
               {EMOJI_REACTIONS.map(({ key, emoji }) => (
                 <button key={key} type="button" onClick={() => toggleReaction(key)}
                   className={clsx('w-10 h-10 rounded-full flex items-center justify-center text-[22px] transition-transform hover:scale-125', myReaction(key) ? 'bg-white/15 scale-110' : 'hover:bg-white/10')}>
@@ -517,7 +517,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
             {EMOJI_REACTIONS.filter(r => reactionCount(r.key) > 0).map(({ key, emoji }) => (
               <button key={key} type="button" onClick={() => toggleReaction(key)}
                 className={clsx('flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full border transition',
-                  myReaction(key) ? 'bg-blue-600/30 border-blue-400/40 text-white' : 'bg-neutral-800/80 border-white/10 text-neutral-300 hover:bg-white/10')}>
+                  myReaction(key) ? 'bg-[var(--accent)]/30 border-[var(--accent2)]/40 text-white' : 'bg-[var(--bg3)]/80 border-[var(--border)] text-neutral-300 hover:bg-white/10')}>
                 <span className="text-[13px]">{emoji}</span>
                 {reactionCount(key) > 1 && <span>{reactionCount(key)}</span>}
               </button>
@@ -526,10 +526,10 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
         )}
 
         {showError && status === 'error' && mine && (
-          <div className="absolute right-0 -bottom-1 translate-y-full z-30 w-64 rounded-xl border border-white/10 bg-neutral-900/95 backdrop-blur shadow-lg p-3">
+          <div className="absolute right-0 -bottom-1 translate-y-full z-30 w-64 rounded-xl border border-[var(--border)] bg-[var(--bg2)]/95 backdrop-blur shadow-lg p-3">
             <div className="text-sm mb-2">{errorMessage || 'No se pudo enviar el mensaje.'}</div>
             <div className="flex justify-end gap-2">
-              <button className="px-3 py-1.5 text-sm rounded-lg border border-white/10 hover:bg-white/10" onClick={() => setShowError(false)}>Cancelar</button>
+              <button className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] hover:bg-white/10" onClick={() => setShowError(false)}>Cancelar</button>
               <button className="px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-500" onClick={() => { setShowError(false); onRetry?.() }}>Reintentar</button>
             </div>
           </div>
@@ -1018,21 +1018,21 @@ function MensajesPageContent() {
   }, [user?.uid, profile, activeConversation, inviteBypass, inviteOwnerUid, otherUid])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
+    <div className="mx-auto max-w-7xl px-4 pt-[76px] pb-6 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
       <aside className="hidden md:block md:sticky md:top-4 h-fit"><PerfilNav /></aside>
 
-      <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-140px)] min-h-0">
+      <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-100px)] min-h-0">
         {/* lista de conversaciones */}
-        <aside className={clsx('border border-white/10 rounded-2xl p-3 flex flex-col h-full overflow-hidden', mobileView === 'list' ? 'block' : 'hidden', 'lg:block')}>
+        <aside className={clsx('border border-[var(--border)] bg-[var(--card)] rounded-2xl p-3 flex flex-col h-full overflow-hidden', mobileView === 'list' ? 'block' : 'hidden', 'lg:block')}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">Chatear</h2>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <div className="flex-1 relative">
               <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60" />
-              <input className="w-full rounded-full border border-white/10 pl-9 pr-4 py-2 text-sm bg-transparent" placeholder="Buscar" />
+              <input className="w-full rounded-full border border-[var(--border)] pl-9 pr-4 py-2 text-sm bg-transparent" placeholder="Buscar" />
             </div>
-            <button onClick={() => setOpenNew(true)} className="w-10 h-10 rounded-full border border-white/10 text-xl leading-none cursor-pointer transition hover:bg-white/10" title="Nuevo chat">+</button>
+            <button onClick={() => setOpenNew(true)} className="w-10 h-10 rounded-full border border-[var(--border)] text-xl leading-none cursor-pointer transition hover:bg-white/10" title="Nuevo chat">+</button>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <Chip active={convFilter === 'all'} onClick={() => setConvFilter('all')}>Todas</Chip>
@@ -1057,12 +1057,12 @@ function MensajesPageContent() {
               return (
                 <div key={c.id} className="relative group">
                   <div onClick={() => { setActiveCid(c.id); setMobileView('thread'); markConversationRead(c.id, user, db); router.replace(`/mensajes?c=${c.id}`, { scroll: false }) }}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl transition cursor-pointer ${selected ? 'bg-white/8' : 'hover:bg-white/5'}`}>
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl transition cursor-pointer ${selected ? 'bg-[var(--bg3)]' : 'hover:bg-white/5'}`}>
                     {isGroup ? (
                       c.groupPhotoURL
                         // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={c.groupPhotoURL} alt={name} className="h-[46px] w-[46px] shrink-0 rounded-full object-cover border border-white/10" />
-                        : <div className="h-[46px] w-[46px] shrink-0 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-base font-semibold text-white/70">{(c.groupName?.[0] || 'G').toUpperCase()}</div>
+                        ? <img src={c.groupPhotoURL} alt={name} className="h-[46px] w-[46px] shrink-0 rounded-full object-cover border border-[var(--border)]" />
+                        : <div className="h-[46px] w-[46px] shrink-0 rounded-full bg-[var(--bg3)] border border-[var(--border)] flex items-center justify-center text-base font-semibold text-white/70">{(c.groupName?.[0] || 'G').toUpperCase()}</div>
                     ) : <Avatar src={avatar} alt={name} size={46} />}
                     <div className="flex-1 min-w-0 pr-8">
                       <div className="flex items-center justify-between gap-2">
@@ -1070,11 +1070,11 @@ function MensajesPageContent() {
                           <span className={`truncate text-[14px] ${isDeletedUser(u) ? 'text-white/30 italic font-normal' : unread ? 'font-semibold text-white' : 'font-medium text-white/85'}`}>{name}</span>
                           {!isGroup && other && !isDeletedUser(u) && <Badges uid={other} size="xs" />}
                         </div>
-                        {when && <span className={`text-[11px] shrink-0 ${unread ? 'text-sky-400 font-medium' : 'opacity-45'}`}>{when}</span>}
+                        {when && <span className={`text-[11px] shrink-0 ${unread ? 'text-[var(--accent2)] font-medium' : 'opacity-45'}`}>{when}</span>}
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-0.5">
                         <div className={`text-xs truncate ${unread ? 'text-white/75' : 'opacity-45'}`}>{lm || ' '}</div>
-                        {unread && <span className="shrink-0 w-2 h-2 rounded-full bg-sky-400" />}
+                        {unread && <span className="shrink-0 w-2 h-2 rounded-full bg-[var(--accent2)]" />}
                       </div>
                     </div>
                   </div>
@@ -1082,7 +1082,7 @@ function MensajesPageContent() {
                     <IconMore />
                   </button>
                   {showMenu && (
-                    <div className="mx-3 mb-1 bg-black/90 border border-white/10 rounded-lg p-1 text-sm shadow-xl">
+                    <div className="mx-3 mb-1 bg-black/90 border border-[var(--border)] rounded-lg p-1 text-sm shadow-xl">
                       <button className="px-3 py-2 rounded-lg hover:bg-white/10 cursor-pointer w-full text-left" onClick={() => { setMenuCid(null); deleteConversation(c.id) }}>Eliminar chat</button>
                     </div>
                   )}
@@ -1091,14 +1091,14 @@ function MensajesPageContent() {
             })}
             {!convos.length && !convosErr && <div className="text-sm opacity-70 p-3">No tienes conversaciones.</div>}
             {convosErr?.code === 'failed-precondition' && (
-              <div className="text-xs p-3 rounded-lg border border-white/10">Esta vista requiere un índice de Firestore. Abre el enlace de la consola para crearlo.</div>
+              <div className="text-xs p-3 rounded-lg border border-[var(--border)]">Esta vista requiere un índice de Firestore. Abre el enlace de la consola para crearlo.</div>
             )}
           </div>
         </aside>
 
         {/* hilo de conversación */}
-        <section className={clsx('border border-white/10 rounded-2xl flex flex-col h-full overflow-hidden lg:static lg:flex', mobileView === 'thread' ? 'fixed inset-0 z-40 bg-neutral-950' : 'hidden lg:flex')}>
-          <div className="p-3 border-b border-white/10 sticky top-0 bg-neutral-950/95 backdrop-blur z-10">
+        <section className={clsx('border border-[var(--border)] bg-[var(--card)] rounded-2xl flex flex-col h-full overflow-hidden lg:static lg:flex', mobileView === 'thread' ? 'fixed inset-0 z-40 bg-[var(--bg)]' : 'hidden lg:flex')}>
+          <div className="p-3 border-b border-[var(--border)] sticky top-0 bg-[var(--card)]/95 backdrop-blur z-10">
             <div className="flex items-center gap-3">
               <button type="button" aria-label="Volver" onClick={() => setMobileView('list')} className="lg:hidden rounded-full p-2 hover:bg-white/10 active:scale-95 transition">
                 <ChevronLeftIcon className="w-5 h-5" />
@@ -1110,8 +1110,8 @@ function MensajesPageContent() {
                   {isGroupConv ? (
                     activeConversation?.groupPhotoURL
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={activeConversation.groupPhotoURL} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/10" />
-                      : <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-base font-semibold text-white/70">{(activeConversation?.groupName?.[0] || 'G').toUpperCase()}</div>
+                      ? <img src={activeConversation.groupPhotoURL} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover border border-[var(--border)]" />
+                      : <div className="h-10 w-10 shrink-0 rounded-full bg-[var(--bg3)] border border-[var(--border)] flex items-center justify-center text-base font-semibold text-white/70">{(activeConversation?.groupName?.[0] || 'G').toUpperCase()}</div>
                   ) : <Avatar src={avatarFromUser(otherUser)} alt={displayNameFromUser(otherUser)} size={40} />}
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold truncate flex items-center gap-2">
@@ -1134,7 +1134,7 @@ function MensajesPageContent() {
                   <div className="ml-auto flex items-center gap-0.5">
                     <button type="button" title={selectMode ? 'Cancelar selección' : 'Seleccionar mensajes'}
                       onClick={() => { setSelectMode(v => !v); setSelectedMsgIds(new Set()) }}
-                      className={clsx('rounded-full p-2 transition hover:bg-white/10 cursor-pointer', selectMode && 'bg-white/10 text-blue-400')}>
+                      className={clsx('rounded-full p-2 transition hover:bg-white/10 cursor-pointer', selectMode && 'bg-white/10 text-[var(--accent2)]')}>
                       <CheckCircleIcon className="w-5 h-5" />
                     </button>
                     {isGroupConv && (
@@ -1152,7 +1152,7 @@ function MensajesPageContent() {
             {imgMenu.open && (
               <>
                 <div className="fixed inset-0 z-[55]" onClick={closeImgMenu} />
-                <div style={{ left: imgMenu.x, top: imgMenu.y }} className="fixed z-[60] w-44 rounded-xl border border-white/10 bg-neutral-900/95 backdrop-blur shadow-lg p-1" role="menu" tabIndex={-1}>
+                <div style={{ left: imgMenu.x, top: imgMenu.y }} className="fixed z-[60] w-44 rounded-xl border border-[var(--border)] bg-[var(--bg2)]/95 backdrop-blur shadow-lg p-1" role="menu" tabIndex={-1}>
                   <MenuItem icon={FaceSmileIcon} label="Reaccionar" onClick={() => { closeImgMenu() }} />
                   <div className="h-px bg-white/10 my-1" />
                   <MenuItem icon={TrashIcon} label="Eliminar" onClick={() => deleteImageMessage(activeCid, imgMenu.msg)} danger />
@@ -1162,7 +1162,7 @@ function MensajesPageContent() {
 
             {loadingMessages && <div className="flex items-center justify-center h-full min-h-[200px]"><div className="text-sm opacity-60">Cargando…</div></div>}
             {!loadingMessages && messagesErr && (
-              <div className="text-xs p-3 rounded-lg border border-white/10">
+              <div className="text-xs p-3 rounded-lg border border-[var(--border)]">
                 No tienes permiso para leer este hilo todavía.
                 {canSendHere && <span className="opacity-70"> Puedes escribir y el otro usuario verá tus mensajes.</span>}
                 <div className="mt-1 opacity-60">{messagesErr?.code || 'permission-denied'}</div>
@@ -1187,7 +1187,7 @@ function MensajesPageContent() {
                             out.push(
                               <div key={m.id} id={`msg-${m.id}`} className={`w-full flex mb-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
                                 <div className="relative inline-flex flex-col max-w-[min(520px,92vw)]">
-                                  <div className={`px-4 py-2 rounded-2xl whitespace-pre-wrap break-words ${isSender ? 'bg-blue-600 text-white ml-auto' : 'bg-neutral-800 text-neutral-100 mr-auto'}`}
+                                  <div className={`px-4 py-2 rounded-2xl whitespace-pre-wrap break-words ${isSender ? 'bg-[var(--accent)] text-white ml-auto' : 'bg-[var(--bg3)] text-neutral-100 mr-auto'}`}
                                     onClick={() => { if (alreadyOpened || isSender) return; window.openViewOnceAndDestroy?.(activeCid, m) }}>
                                     <div className="flex items-center gap-2">
                                       <span className="inline-flex items-center justify-center h-6 min-w-6 px-2 rounded-full bg-black/30 border border-white/20 text-xs">1</span>
@@ -1204,14 +1204,14 @@ function MensajesPageContent() {
                                 <div className="relative inline-flex flex-col max-w-[min(520px,92vw)]">
                                   <div className={`${isSender ? 'ml-auto' : 'mr-auto'} relative`}>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={first?.url} alt={first?.name || 'Imagen'} className="rounded-2xl border border-white/10 cursor-pointer max-w-[min(420px,90vw)] max-h-[60vh] object-contain" onClick={() => { if (first?.url) openLb(first.url, m.text || first.name || '') }} />
+                                    <img src={first?.url} alt={first?.name || 'Imagen'} className="rounded-2xl border border-[var(--border)] cursor-pointer max-w-[min(420px,90vw)] max-h-[60vh] object-contain" onClick={() => { if (first?.url) openLb(first.url, m.text || first.name || '') }} />
                                     <div className="absolute top-2 right-2">
                                       <button type="button" className="h-8 w-8 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center cursor-pointer"
                                         onClick={e => { e.stopPropagation(); if (imgMenu.open) { closeImgMenu(); return } openImgMenu(e, m, first?.url || '', false) }}>⋮</button>
                                     </div>
                                   </div>
                                   {(m.text || first?.name) && (
-                                    <div className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? 'bg-blue-600 text-white ml-auto' : 'bg-neutral-800 text-neutral-100 mr-auto'}`}>
+                                    <div className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? 'bg-[var(--accent)] text-white ml-auto' : 'bg-[var(--bg3)] text-neutral-100 mr-auto'}`}>
                                       <div className="whitespace-pre-wrap break-words">{m.text || first?.name}</div>
                                       <div className="mt-1 text-[11px] opacity-70 leading-none text-right">{(tsToDate(m.at) || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
@@ -1229,7 +1229,7 @@ function MensajesPageContent() {
                               {isGroupConv && senderInGroup && <div className={`text-[11px] text-white/45 mb-0.5 ${isMine ? 'text-right pr-9' : 'pl-9'}`}>{senderInGroup}</div>}
                               <div className={`flex items-end gap-1.5 ${isMine ? 'flex-row-reverse' : ''}`}>
                                 {isGroupConv && (
-                                  <div className="w-7 h-7 rounded-full bg-neutral-800 ring-1 ring-white/10 overflow-hidden flex items-center justify-center shrink-0 text-xs self-end mb-1">
+                                  <div className="w-7 h-7 rounded-full bg-[var(--bg3)] ring-1 ring-white/10 overflow-hidden flex items-center justify-center shrink-0 text-xs self-end mb-1">
                                     {senderAvatar
                                       // eslint-disable-next-line @next/next/no-img-element
                                       ? <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
@@ -1274,7 +1274,7 @@ function MensajesPageContent() {
                 </div>
                 {showDownArrow && (
                   <button type="button" title="Ir al final" onClick={goToBottomSmart}
-                    className="pointer-events-auto absolute bottom-4 right-4 z-40 rounded-full p-3 bg-neutral-900/80 backdrop-blur border border-white/10 hover:bg-neutral-800 shadow-lg cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95">
+                    className="pointer-events-auto absolute bottom-4 right-4 z-40 rounded-full p-3 bg-[var(--bg2)] backdrop-blur border border-[var(--border)] hover:bg-[var(--bg3)] shadow-lg cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-95">
                     <ChevronDownIcon className="w-6 h-6" />
                   </button>
                 )}
@@ -1285,10 +1285,10 @@ function MensajesPageContent() {
           {activeCid && (
             <div className="max-w-3xl mx-auto w-full flex flex-col">
               {replyingTo && (
-                <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-900/80 border-t border-white/10 backdrop-blur">
-                  <div className="w-1 h-9 bg-blue-400 rounded-full flex-shrink-0" />
+                <div className="flex items-center gap-3 px-4 py-2.5 bg-[var(--bg2)] border-t border-[var(--border)] backdrop-blur">
+                  <div className="w-1 h-9 bg-[var(--accent2)] rounded-full flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-blue-400 text-xs font-semibold mb-0.5">{replyingTo.senderName}</div>
+                    <div className="text-[var(--accent2)] text-xs font-semibold mb-0.5">{replyingTo.senderName}</div>
                     <div className="truncate text-xs text-white/60">{replyingTo.text || '📎 adjunto'}</div>
                   </div>
                   <button type="button" onClick={() => setReplyingTo(null)} className="cursor-pointer shrink-0 p-1.5 rounded-full hover:bg-white/10 transition text-white/50 hover:text-white/90">
@@ -1297,12 +1297,12 @@ function MensajesPageContent() {
                 </div>
               )}
               {selectMode && (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900/80 border-t border-white/10 backdrop-blur">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg2)] border-t border-[var(--border)] backdrop-blur">
                   <span className="text-sm text-white/60 flex-1">{selectedMsgIds.size > 0 ? `${selectedMsgIds.size} seleccionado${selectedMsgIds.size !== 1 ? 's' : ''}` : 'Selecciona mensajes'}</span>
                   {selectedMsgIds.size > 0 && (
                     <>
                       <button type="button" onClick={() => { const msgs = messages.filter(m => selectedMsgIds.has(m.id)); if (msgs.length === 1) setForwardingMsg(msgs[0]); setSelectMode(false); setSelectedMsgIds(new Set()) }}
-                        className="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-medium text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 transition">Reenviar</button>
+                        className="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--accent2)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/10 transition">Reenviar</button>
                       <button type="button" onClick={async () => {
                         for (const id of selectedMsgIds) {
                           const m = messages.find(x => x.id === id)
@@ -1348,11 +1348,11 @@ function MensajesPageContent() {
               if (!token) return
               try { await navigator.clipboard.writeText(chatLinkUrl(token)); setShowToast(true); setTimeout(() => setShowToast(false), 2000) }
               catch (e) { console.warn('Error copiando enlace', e) }
-            }} className="inline-flex items-center gap-2 rounded-full bg-emerald-500 text-black px-4 py-2 shadow-lg hover:brightness-95 transition cursor-pointer" title="Mi enlace de chat">
+            }} className="inline-flex items-center gap-2 rounded-full bg-violet-500 text-black px-4 py-2 shadow-lg hover:brightness-95 transition cursor-pointer" title="Mi enlace de chat">
               <LinkIcon className="h-5 w-5" />
               Mi enlace de chat
             </button>
-            {showToast && <div className="absolute -top-10 right-0 bg-black/90 text-white text-xs px-3 py-1 rounded-md border border-white/10 shadow-lg">Enlace copiado ✅</div>}
+            {showToast && <div className="absolute -top-10 right-0 bg-black/90 text-white text-xs px-3 py-1 rounded-md border border-[var(--border)] shadow-lg">Enlace copiado ✅</div>}
           </div>
         )}
       </div>
@@ -1412,8 +1412,8 @@ function GroupMembersModal({ open, conv, userUid, db, onClose }) {
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(480px,92vw)] max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-black">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(480px,92vw)] max-h-[80vh] overflow-hidden rounded-2xl border border-[var(--border)] bg-black">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
           <div>
             <h3 className="font-semibold">{conv?.groupName || 'Grupo'}</h3>
             <p className="text-xs text-white/50">{conv?.participantUids?.length ?? 0} participantes</p>
@@ -1429,7 +1429,7 @@ function GroupMembersModal({ open, conv, userUid, db, onClose }) {
             const isCreator = u.id === conv?.startedBy
             return (
               <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="h-9 w-9 rounded-full bg-neutral-800 ring-1 ring-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-full bg-[var(--bg3)] ring-1 ring-white/10 overflow-hidden flex items-center justify-center shrink-0">
                   {avatar
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={avatar} alt="" className="h-full w-full object-cover" />
@@ -1438,7 +1438,7 @@ function GroupMembersModal({ open, conv, userUid, db, onClose }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-sm font-medium">{name}</span>
-                    {isCreator && <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-0.5">Admin</span>}
+                    {isCreator && <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full px-2 py-0.5">Admin</span>}
                     {isSelf && <span className="text-[10px] text-white/40">Tú</span>}
                   </div>
                   {slug && <div className="text-xs text-white/45 truncate">@{slug}</div>}
@@ -1487,15 +1487,15 @@ function GroupSettingsModal({ open, conv, userUid, db, storage: st, onClose }) {
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] rounded-2xl border border-white/10 bg-black overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] rounded-2xl border border-[var(--border)] bg-black overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
           <h3 className="font-semibold">Ajustes del grupo</h3>
           <button onClick={onClose} className="text-sm text-white/50 hover:text-white cursor-pointer transition">Cerrar</button>
         </div>
         <div className="p-5 space-y-5">
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full bg-neutral-800 border border-white/10 overflow-hidden flex items-center justify-center text-3xl font-bold text-white/70">
+              <div className="h-24 w-24 rounded-full bg-[var(--bg3)] border border-[var(--border)] overflow-hidden flex items-center justify-center text-3xl font-bold text-white/70">
                 {photoURL
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={photoURL} alt="" className="h-full w-full object-cover" />
@@ -1516,9 +1516,9 @@ function GroupSettingsModal({ open, conv, userUid, db, storage: st, onClose }) {
               <label className="text-xs text-white/50 mb-1.5 block">Nombre del grupo</label>
               <div className="flex gap-2">
                 <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={60}
-                  className="flex-1 rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-white/30 transition" />
+                  className="flex-1 rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-white/30 transition" />
                 <button onClick={saveName} disabled={savingName || !editName.trim() || editName.trim() === conv?.groupName}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition">
+                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition">
                   {savingName ? '…' : 'Guardar'}
                 </button>
               </div>
@@ -1557,12 +1557,12 @@ function ForwardModal({ msg, convos, userMap, userUid, db, onClose }) {
   }
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-neutral-900 border border-white/10 rounded-2xl w-full max-w-sm p-4 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+      <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-2xl w-full max-w-sm p-4 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <span className="font-semibold">Reenviar a...</span>
           <button type="button" onClick={onClose} className="opacity-50 hover:opacity-100 p-1 rounded-full hover:bg-white/10">✕</button>
         </div>
-        <input autoFocus placeholder="Buscar conversación..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-neutral-800 rounded-xl px-3 py-2 text-sm outline-none border border-white/10" />
+        <input autoFocus placeholder="Buscar conversación..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[var(--bg3)] rounded-xl px-3 py-2 text-sm outline-none border border-[var(--border)]" />
         <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
           {filtered.map(c => {
             const otherId = (c.participantUids || []).find(u => u !== userUid) || ''
@@ -1574,15 +1574,15 @@ function ForwardModal({ msg, convos, userMap, userUid, db, onClose }) {
               <button key={c.id} type="button" disabled={sending === c.id || isSent} onClick={() => !isSent && forward(c.id)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 text-sm text-left disabled:opacity-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={avatar} alt={name} className="w-8 h-8 rounded-full border border-white/10 object-cover flex-shrink-0" />
+                <img src={avatar} alt={name} className="w-8 h-8 rounded-full border border-[var(--border)] object-cover flex-shrink-0" />
                 <span className="flex-1 truncate">{name}</span>
-                {sending === c.id ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : isSent ? <CheckIcon className="w-4 h-4 text-green-400" /> : <span className="text-blue-400 text-xs">Enviar</span>}
+                {sending === c.id ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : isSent ? <CheckIcon className="w-4 h-4 text-green-400" /> : <span className="text-[var(--accent2)] text-xs">Enviar</span>}
               </button>
             )
           })}
           {!filtered.length && <div className="text-sm opacity-50 text-center py-4">Sin conversaciones</div>}
         </div>
-        {sent.size > 0 && <button type="button" onClick={onClose} className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-medium transition">Listo</button>}
+        {sent.size > 0 && <button type="button" onClick={onClose} className="w-full py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent2)] text-sm font-medium transition">Listo</button>}
       </div>
     </div>
   )
@@ -1690,7 +1690,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
   }
 
   const EmojiPanel = () => (
-    <div className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur shadow-xl overflow-hidden">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur shadow-xl overflow-hidden">
       <div className="flex items-center gap-0.5 px-2 pt-2 pb-1 border-b border-white/8 overflow-x-auto scrollbar-none">
         {EMOJI_CATS.map((cat, i) => (
           <button key={cat.label} type="button" title={cat.title} onClick={() => setEmojiCat(i)}
@@ -1723,7 +1723,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
   return (
     <div className="p-4">
       {pendingImages.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-white/10 bg-black/80 backdrop-blur p-3 shadow-lg">
+        <div className="mb-3 rounded-2xl border border-[var(--border)] bg-black/80 backdrop-blur p-3 shadow-lg">
           <div className="flex items-center justify-between mb-2 relative">
             <button type="button" onClick={() => { taRef.current?.focus(); setShowEmojiPanel(v => !v) }}
               className={clsx('p-2 rounded-lg transition cursor-pointer hover:bg-white/10', showEmojiPanel && 'bg-white/10 text-yellow-300')}>
@@ -1735,17 +1735,17 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
           <div className="flex gap-2 overflow-x-auto pb-2">
             {pendingImages.map(img => (
               <div key={img.id} className="relative shrink-0">
-                <img src={img.url} alt="" className="h-28 w-28 object-cover rounded-xl border border-white/10" />
-                <button onClick={() => removePending(img.id)} className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/80 border border-white/15 hover:bg-black">×</button>
+                <img src={img.url} alt="" className="h-28 w-28 object-cover rounded-xl border border-[var(--border)]" />
+                <button onClick={() => removePending(img.id)} className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/80 border border-[var(--border)] hover:bg-black">×</button>
               </div>
             ))}
           </div>
           <div className="mt-2 flex items-center justify-end gap-3">
             <button type="button"
               onClick={() => setViewOnce(v => { const nv = !v; toastOnce(nv ? 'La imagen se podrá ver una sola vez' : 'La imagen se podrá ver siempre'); return nv })}
-              className={`h-8 min-w-8 px-3 rounded-full border transition cursor-pointer ${viewOnce ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-white/10 border-white/15'}`}
+              className={`h-8 min-w-8 px-3 rounded-full border transition cursor-pointer ${viewOnce ? 'bg-violet-500 text-black border-violet-500' : 'bg-white/10 border-[var(--border)]'}`}
               aria-pressed={viewOnce}>1</button>
-            <button type="button" onClick={sendPendingImages} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-black hover:brightness-95 cursor-pointer">Enviar</button>
+            <button type="button" onClick={sendPendingImages} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500 text-black hover:brightness-95 cursor-pointer">Enviar</button>
           </div>
           {showEmojiPanel && <div className="mt-2"><EmojiPanel /></div>}
         </div>
@@ -1756,11 +1756,11 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
       <form onSubmit={submitText}>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <button type="button" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center transition hover:bg-white/10 active:scale-95" disabled={disabled} onClick={() => setOpenMenu(v => !v)} style={{ cursor: disabled ? 'default' : 'pointer' }}>
+            <button type="button" className="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center transition hover:bg-white/10 active:scale-95" disabled={disabled} onClick={() => setOpenMenu(v => !v)} style={{ cursor: disabled ? 'default' : 'pointer' }}>
               <PlusIcon className="w-5 h-5" />
             </button>
             {openMenu && !disabled && (
-              <div className="absolute left-0 bottom-12 z-10 bg-black/90 border border-white/10 rounded-xl p-2 text-sm shadow-lg">
+              <div className="absolute left-0 bottom-12 z-10 bg-black/90 border border-[var(--border)] rounded-xl p-2 text-sm shadow-lg">
                 <button className="block px-3 py-1 w-full text-left hover:bg-white/10 rounded-lg" onClick={() => pick('image')}>Imagen</button>
                 <button className="block px-3 py-1 w-full text-left hover:bg-white/10 rounded-lg" onClick={() => pick('file')}>Archivo</button>
                 <button className="block px-3 py-1 w-full text-left hover:bg-white/10 rounded-lg" onClick={() => pick('audio')}>Audio</button>
@@ -1770,7 +1770,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
           <input ref={imgRef} type="file" accept="image/*" multiple className="hidden" onChange={e => handleFiles(e.target.files, 'image')} />
           <input ref={fileRef} type="file" multiple className="hidden" onChange={e => handleFiles(e.target.files, 'file')} />
           <input ref={audioRef} type="file" accept="audio/*" multiple className="hidden" onChange={e => handleFiles(e.target.files, 'audio')} />
-          <div className="relative flex items-end gap-2 rounded-full border border-white/10 px-2 py-2 flex-1 overflow-hidden">
+          <div className="relative flex items-end gap-2 rounded-full border border-[var(--border)] px-2 py-2 flex-1 overflow-hidden">
             <button type="button" onClick={() => { taRef.current?.focus(); setShowEmojiPanel(v => !v) }}
               className={clsx('p-2 rounded-lg transition cursor-pointer hover:bg-white/10', showEmojiPanel && 'bg-white/10 text-yellow-300')}>
               <FaceSmileIcon className="w-5 h-5" />
@@ -1793,7 +1793,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping }) {
               disabled={disabled} rows={1} inputMode="text" enterKeyHint="send"
               style={{ height: 'auto', overflowY: 'hidden', whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingRight: '0.75rem', paddingLeft: '0.75rem' }} />
             <button type="submit"
-              className={clsx('shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition active:scale-90', canSendText ? 'bg-blue-600 hover:bg-blue-500 cursor-pointer' : 'bg-white/8 text-white/30 cursor-default')}
+              className={clsx('shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition active:scale-90', canSendText ? 'bg-[var(--accent)] hover:bg-[var(--accent2)] cursor-pointer' : 'bg-white/8 text-white/30 cursor-default')}
               disabled={!canSendText}>
               <PaperAirplaneIcon className="w-4 h-4 -rotate-45 translate-x-px" />
             </button>
