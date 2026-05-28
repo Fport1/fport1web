@@ -5,13 +5,36 @@ import Link from 'next/link'
 
 const GITHUB_API = 'https://api.github.com/repos/Fport1/modpacklauncher/releases/latest'
 
-function detectOS() {
+async function detectOS() {
   if (typeof navigator === 'undefined') return 'unknown'
   const ua = navigator.userAgent
   const platform = navigator.platform || ''
   if (/Win/i.test(platform) || /Windows/i.test(ua)) return 'windows'
-  if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return 'mac-x64'
   if (/Linux/i.test(platform) || /Linux/i.test(ua)) return 'linux'
+  if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) {
+    // 1. API moderna (Chrome/Edge): reporta arquitectura real
+    try {
+      if (navigator.userAgentData?.getHighEntropyValues) {
+        const d = await navigator.userAgentData.getHighEntropyValues(['architecture'])
+        return d.architecture === 'arm' ? 'mac-arm' : 'mac-x64'
+      }
+    } catch {}
+    // 2. WebGL renderer (funciona en Safari): Apple M-series tiene "Apple GPU" o "Apple Mx"
+    try {
+      const c = document.createElement('canvas')
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl')
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info')
+        if (ext) {
+          const r = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
+          if (/Apple M\d|Apple GPU/i.test(r)) return 'mac-arm'
+          if (/Intel/i.test(r)) return 'mac-x64'
+        }
+      }
+    } catch {}
+    // 3. No se pudo detectar → mostrar ambas opciones
+    return 'mac-unknown'
+  }
   return 'unknown'
 }
 
@@ -36,7 +59,7 @@ export default function Home() {
   const [macFlash, setMacFlash]         = useState(false)
 
   useEffect(() => {
-    setOs(detectOS())
+    detectOS().then(setOs)
     fetch(GITHUB_API)
       .then(r => r.json())
       .then(data => {
@@ -57,6 +80,7 @@ export default function Home() {
     'mac-arm': 'Descargar para macOS Apple Silicon (.dmg)',
     linux: 'Descargar para Linux (.AppImage)',
     unknown: 'Ver todas las plataformas',
+    'mac-unknown': 'Ver versiones de macOS ↓',
   }[os] ?? 'Detectando sistema...'
 
   function copyMacCmd() {
