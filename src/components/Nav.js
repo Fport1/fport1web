@@ -124,7 +124,7 @@ export default function Nav() {
           {!loading && user && Date.now() < DOOMSDAY_DEADLINE && (
             <Link
               href="/doomsday"
-              title="Avengers: Doomsday — ¿quién va?"
+              aria-label="Avengers: Doomsday"
               style={{
                 display: 'flex', alignItems: 'center',
                 color: 'var(--sub)', textDecoration: 'none',
