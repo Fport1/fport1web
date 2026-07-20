@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
+import { useUnreadCount } from '@/lib/useUnreadCount'
+import AvengersLogo from '@/components/AvengersLogo'
 
 const ACCOUNTS_KEY = 'fport1_accounts'
+// Botón Doomsday visible hasta el 16 de diciembre de 2026 (día del estreno en Latam es el 17)
+const DOOMSDAY_DEADLINE = new Date('2026-12-17T00:00:00').getTime()
 
 function getInitial(name) {
   return name ? name.trim()[0].toUpperCase() : '?'
@@ -24,6 +28,7 @@ function MiniAvatar({ photoURL, name, size = 22 }) {
 export default function Nav() {
   const router = useRouter()
   const { user, profile, loading, switching, signOut, switchToGoogle } = useAuth()
+  const unread = useUnreadCount(user?.uid)
   const [open, setOpen] = useState(false)
   const [savedAccounts, setSavedAccounts] = useState([])
   const ref = useRef(null)
@@ -115,6 +120,29 @@ export default function Nav() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          {/* Avengers: Doomsday — solo con sesión, hasta el 16 dic 2026 */}
+          {!loading && user && Date.now() < DOOMSDAY_DEADLINE && (
+            <Link
+              href="/doomsday"
+              title="Avengers: Doomsday — ¿quién va?"
+              style={{
+                display: 'flex', alignItems: 'center',
+                color: 'var(--sub)', textDecoration: 'none',
+                transition: 'color .2s, filter .2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = '#15803d'
+                e.currentTarget.style.filter = 'drop-shadow(0 0 8px rgba(21,128,61,.7))'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--sub)'
+                e.currentTarget.style.filter = 'none'
+              }}
+            >
+              <AvengersLogo size={22} />
+            </Link>
+          )}
+
           <Link href="/#launcher" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Launcher</Link>
 
           {!loading && !switching && (
@@ -132,7 +160,17 @@ export default function Nav() {
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--sub)'}
                 >
-                  <MiniAvatar photoURL={profile?.photoURL} name={myName} size={24} />
+                  <div style={{ position: 'relative' }}>
+                    <MiniAvatar photoURL={profile?.photoURL} name={myName} size={24} />
+                    {unread > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -3, right: -3,
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: 'var(--accent)',
+                        border: '1.5px solid rgba(9,9,11,.8)',
+                      }} />
+                    )}
+                  </div>
                   {myName}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                     style={{ color: 'var(--muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
@@ -216,6 +254,14 @@ export default function Nav() {
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                       Mensajes
+                      {unread > 0 && (
+                        <span style={{
+                          marginLeft: 'auto', background: 'var(--accent)', color: '#fff',
+                          fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                        }}>
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
                     </Link>
 
                     <div style={{ height: 1, background: 'var(--border)', margin: '3px 4px' }} />

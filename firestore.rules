@@ -63,6 +63,18 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
     }
 
+    // Avengers: Doomsday — lista de asistentes al estreno
+    // Cada usuario gestiona su propio RSVP; @fport1 es admin (asigna sillas, quita gente)
+    match /doomsday_rsvps/{uid} {
+      function isDoomsdayAdmin() {
+        return request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
+      }
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+      allow update, delete: if isDoomsdayAdmin();
+    }
+
     match /chats/{chatId} {
       // get: allow reading non-existent docs (resource == null) so openChat can check existence
       allow get:    if request.auth != null && (resource == null || request.auth.uid in resource.data.members);
