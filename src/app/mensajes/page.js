@@ -26,6 +26,7 @@ import {
 import { Suspense } from 'react'
 import Badges from '@/components/Badges'
 import Link from 'next/link'
+import { resolvePresence } from '@/lib/presence'
 
 /* === Share card === */
 function ShareCard({ meta }) {
@@ -539,7 +540,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
             <div className="text-sm mb-2">{errorMessage || 'No se pudo enviar el mensaje.'}</div>
             <div className="flex justify-end gap-2">
               <button className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] hover:bg-white/10" onClick={() => setShowError(false)}>Cancelar</button>
-              <button className="px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-500" onClick={() => { setShowError(false); onRetry?.() }}>Reintentar</button>
+              <button className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] hover:bg-[var(--accent2)] text-white" onClick={() => { setShowError(false); onRetry?.() }}>Reintentar</button>
             </div>
           </div>
         )}
@@ -704,7 +705,8 @@ function MensajesPageContent() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [messagesErr, setMessagesErr] = useState(null)
   const wasLoadingRef = useRef(false)
-  const [userMap, setUserMap] = useState({})
+  const [userMap,     setUserMap]     = useState({})
+  const [presenceMap, setPresenceMap] = useState({})
   const [menuCid, setMenuCid] = useState(null)
 
   useEffect(() => {
@@ -741,9 +743,19 @@ function MensajesPageContent() {
 
   const creatingRef = useRef(false)
 
-  /* conversaciones */
+  /* pedir permiso de notificaciones al montar */
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
+
+  /* conversaciones + notificaciones de browser */
   useEffect(() => {
     if (!user?.uid) return
+    let initialized = false
+    let prevLastAt = {}
+
     const qConvos = query(collection(db, 'conversations'), where('participantUids', 'array-contains', user.uid), orderBy('updatedAt', 'desc'), limit(50))
     const unsub = onSnapshot(qConvos, snap => {
       setConvosErr(null)
@@ -751,6 +763,30 @@ function MensajesPageContent() {
       setConvos(list)
       const cidParam = searchParams?.get('c')
       if (!activeCid && list.length && cidParam && list.some(x => x.id === cidParam)) setActiveCid(cidParam)
+
+      // Notificaciones: después del primer snap (estado inicial), detectar mensajes nuevos
+      if (initialized) {
+        list.forEach(c => {
+          const lm = c.lastMessage
+          if (!lm?.at || !lm?.senderUid || lm.senderUid === user.uid) return
+          const myReadAt = c.readAt?.[user.uid]?.toMillis?.() ?? 0
+          const lastAtMs = lm.at?.toMillis?.() ?? 0
+          const prev = prevLastAt[c.id] ?? 0
+          if (lastAtMs > prev && lastAtMs > myReadAt && document.hidden && Notification.permission === 'granted') {
+            const senderName = lm.senderName || lm.senderUid
+            const notif = new Notification(`Nuevo mensaje de ${senderName}`, {
+              body: lm.text || '📎 Archivo adjunto',
+              icon: '/favicon.ico',
+              tag: c.id,
+            })
+            notif.onclick = () => { window.focus(); notif.close() }
+          }
+          prevLastAt[c.id] = lastAtMs
+        })
+      } else {
+        list.forEach(c => { prevLastAt[c.id] = c.lastMessage?.at?.toMillis?.() ?? 0 })
+        initialized = true
+      }
     }, err => setConvosErr(err))
     return () => unsub()
   }, [user?.uid, activeCid])
@@ -777,6 +813,21 @@ function MensajesPageContent() {
     if (!user?.uid || !profile) return
     setUserMap(prev => { if (prev[user.uid]) return prev; return { ...prev, [user.uid]: { uid: user.uid, ...profile } } })
   }, [user?.uid, profile])
+
+  /* presencia en tiempo real de todos los participantes de conversaciones directas */
+  useEffect(() => {
+    if (!user?.uid || !convos.length) return
+    const others = new Set()
+    convos.forEach(c => { if (!c.isGroup) (c.participantUids || []).forEach(p => { if (p !== user.uid) others.add(p) }) })
+    const pMap = {}
+    const unsubs = [...others].map(uid =>
+      onSnapshot(doc(db, 'presence', uid), snap => {
+        pMap[uid] = snap.exists() ? snap.data() : null
+        setPresenceMap({ ...pMap })
+      }, () => {})
+    )
+    return () => unsubs.forEach(u => u())
+  }, [convos, user?.uid])
 
   /* resolver token de invitación */
   useEffect(() => {
@@ -842,7 +893,7 @@ function MensajesPageContent() {
         const rows = []
         for (const d of snap.docs) {
           const m = { id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }
-          const text = await decryptMessage(m.textCipher, activeCid, user?.uid)
+          const text = await decryptMessage(m.textCipher ?? m.text ?? '', activeCid, user?.uid)
           rows.push({ ...m, text })
         }
         rows.sort((a, b) => {
@@ -1074,7 +1125,16 @@ function MensajesPageContent() {
                         // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={c.groupPhotoURL} alt={name} className="h-[46px] w-[46px] shrink-0 rounded-full object-cover border border-[var(--border)]" />
                         : <div className="h-[46px] w-[46px] shrink-0 rounded-full bg-[var(--bg3)] border border-[var(--border)] flex items-center justify-center text-base font-semibold text-white/70">{(c.groupName?.[0] || 'G').toUpperCase()}</div>
-                    ) : <Avatar src={avatar} alt={name} size={46} />}
+                    ) : (() => {
+                      const pres = resolvePresence(other ? presenceMap[other] : null, true)
+                      return (
+                        <div className="relative shrink-0">
+                          <Avatar src={avatar} alt={name} size={46} />
+                          {pres?.playing && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#4ade80] border-2 border-[var(--bg2)]" />}
+                          {!pres?.playing && pres?.online && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#60a5fa] border-2 border-[var(--bg2)]" />}
+                        </div>
+                      )
+                    })()}
                     <div className="flex-1 min-w-0 pr-8">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1085,7 +1145,15 @@ function MensajesPageContent() {
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-0.5">
                         <div className={`text-xs truncate ${unread ? 'text-white/75' : 'opacity-45'}`}>{lm || ' '}</div>
-                        {unread && <span className="shrink-0 w-2 h-2 rounded-full bg-[var(--accent2)]" />}
+                        {unread && (
+                          <span style={{
+                            flexShrink: 0, background: 'var(--accent)', color: '#fff',
+                            fontSize: 10, fontWeight: 700, lineHeight: 1,
+                            padding: '2px 5px', borderRadius: 99, minWidth: 16, textAlign: 'center',
+                          }}>
+                            NEW
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

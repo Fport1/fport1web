@@ -9,6 +9,7 @@ import {
   query, where, orderBy, onSnapshot, serverTimestamp, limit,
 } from 'firebase/firestore'
 import PerfilNav from '@/components/PerfilNav'
+import { setVisibility, resolvePresence } from '@/lib/presence'
 
 function stripAt(s) { return s ? s.replace(/^@/, '') : s }
 
@@ -42,6 +43,8 @@ export default function PerfilPage() {
   const [searching, setSearching]   = useState(false)
   const [actionMsg, setActionMsg]   = useState(null)
   const [copyFriendLink, setCopyFriendLink] = useState(false)
+  const [myVisibility, setMyVisibility]     = useState(null)
+  const [visSaving, setVisSaving]           = useState(false)
 
   useEffect(() => {
     if (!authLoading && !switching && !user) router.push('/login')
@@ -50,20 +53,42 @@ export default function PerfilPage() {
   useEffect(() => {
     if (!user) return
     const q = query(collection(db, 'users', user.uid, 'friends'), orderBy('addedAt', 'desc'))
-    const unsub = onSnapshot(q, async snap => {
+    const unsubs = []
+    const presenceMap = {}
+
+    const unsub = onSnapshot(q, snap => {
       const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
       setFriends(list)
-      const presenceMap = {}
-      await Promise.all(list.map(async f => {
-        try {
-          const pSnap = await getDoc(doc(db, 'presence', f.uid))
-          if (pSnap.exists()) presenceMap[f.uid] = pSnap.data()
-        } catch { /* ignore */ }
-      }))
-      setPresence(presenceMap)
+
+      // subscribe to each friend's presence in real-time
+      unsubs.forEach(u => u())
+      unsubs.length = 0
+      list.forEach(f => {
+        const pUnsub = onSnapshot(doc(db, 'presence', f.uid), pSnap => {
+          presenceMap[f.uid] = pSnap.exists() ? pSnap.data() : null
+          setPresence({ ...presenceMap })
+        }, () => {})
+        unsubs.push(pUnsub)
+      })
     })
+
+    return () => { unsub(); unsubs.forEach(u => u()) }
+  }, [user])
+
+  // Load own visibility setting
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(doc(db, 'presence', user.uid), snap => {
+      setMyVisibility(snap.exists() ? (snap.data().visibility ?? 'everyone') : 'everyone')
+    }, () => {})
     return () => unsub()
   }, [user])
+
+  async function saveVisibility(val) {
+    setVisSaving(true)
+    try { await setVisibility(user.uid, val); setMyVisibility(val) } catch {}
+    finally { setVisSaving(false) }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -188,7 +213,7 @@ export default function PerfilPage() {
       </div>
 
       <div className="profile-tabs">
-        {[['friends', 'Amigos'], ['requests', 'Solicitudes'], ['add', 'Añadir']].map(([key, label]) => (
+        {[['friends', 'Amigos'], ['requests', 'Solicitudes'], ['add', 'Añadir'], ['privacy', 'Privacidad']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`profile-tab${tab === key ? ' active' : ''}`} style={{ position: 'relative' }}>
             {label}
             {key === 'requests' && requests.length > 0 && (
@@ -218,16 +243,21 @@ export default function PerfilPage() {
               <button onClick={() => setTab('add')} style={{ color: 'var(--accent2)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>Añadir tu primer amigo →</button>
             </div>
           ) : friends.map(f => {
-            const p = presence[f.uid]
+            const raw = presence[f.uid]
+            const p   = resolvePresence(raw, true) // viewer is always a friend here
             const fname = f.profileName || f.usernameSlug || '?'
             const head = f.minecraftUUID ? minecraftHead(f.minecraftUUID) : null
             return (
               <div key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px' }}>
-                <Avatar src={head ?? f.photoURL} name={fname} size={40} />
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <Avatar src={head ?? f.photoURL} name={fname} size={40} />
+                  {p?.playing && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#4ade80', border: '2px solid var(--card)' }} />}
+                  {!p?.playing && p?.online && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#60a5fa', border: '2px solid var(--card)' }} />}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{fname}</p>
-                  <p style={{ fontSize: 12, margin: '2px 0 0', color: p?.playing ? '#22c55e' : p?.online ? '#60a5fa' : 'var(--muted)' }}>
-                    {p?.playing ? '🎮 Jugando ahora' : p?.online ? '🟢 En línea' : '⚫ Desconectado'}
+                  <p style={{ fontSize: 12, margin: '2px 0 0', color: p?.playing ? '#4ade80' : p?.online ? '#60a5fa' : 'var(--muted)' }}>
+                    {p?.playing ? '🎮 Jugando ahora' : p?.online ? 'En línea' : 'Desconectado'}
                   </p>
                 </div>
                 <button onClick={() => router.push(`/mensajes?u=${f.uid}`)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Chat</button>
@@ -321,6 +351,53 @@ export default function PerfilPage() {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* PRIVACIDAD */}
+      {tab === 'privacy' && (
+        <div style={{ maxWidth: 480 }}>
+          <p style={{ fontSize: 13, color: 'var(--sub)', marginBottom: 24, lineHeight: 1.6 }}>
+            Controla quién puede ver si estás conectado o jugando Minecraft.
+          </p>
+
+          {[
+            { val: 'everyone', label: 'Todos', desc: 'Cualquier persona puede ver tu estado en línea.' },
+            { val: 'friends', label: 'Solo amigos', desc: 'Solo las personas en tu lista de amigos ven tu estado.' },
+            { val: 'nobody',  label: 'Nadie',    desc: 'Siempre apareces como desconectado para todos.' },
+          ].map(opt => {
+            const active = (myVisibility ?? 'everyone') === opt.val
+            return (
+              <button
+                key={opt.val}
+                onClick={() => saveVisibility(opt.val)}
+                disabled={visSaving}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+                  textAlign: 'left', background: active ? 'rgba(124,58,237,.1)' : 'var(--card)',
+                  border: `1px solid ${active ? 'rgba(124,58,237,.5)' : 'var(--border)'}`,
+                  borderRadius: 12, padding: '14px 18px', marginBottom: 10,
+                  cursor: visSaving ? 'wait' : 'pointer',
+                  transition: 'border-color .15s, background .15s',
+                }}
+              >
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                  background: active ? 'var(--accent)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                </span>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: active ? 'var(--accent2)' : 'var(--text)' }}>{opt.label}</p>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 0' }}>{opt.desc}</p>
+                </div>
+              </button>
+            )
+          })}
+
+          {visSaving && <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Guardando…</p>}
         </div>
       )}
 
