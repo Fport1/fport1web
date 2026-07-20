@@ -120,8 +120,8 @@ export default function Nav() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          {/* Avengers: Doomsday — solo con sesión, hasta el 16 dic 2026 */}
-          {!loading && user && Date.now() < DOOMSDAY_DEADLINE && (
+          {/* Avengers: Doomsday — cerrada al público hasta la preventa Latam; solo @fport1 */}
+          {!loading && user && profile?.usernameSlug === 'fport1' && Date.now() < DOOMSDAY_DEADLINE && (
             <Link
               href="/doomsday"
               aria-label="Avengers: Doomsday"

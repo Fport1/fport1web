@@ -16,6 +16,9 @@ import AvengersLogo from '@/components/AvengersLogo'
 // Preventa EE.UU.: 20 de julio 2026 · Latam: por anunciar
 const PREMIERE = new Date('2026-12-17T00:00:00')
 const ADMIN_SLUG = 'fport1'
+// Mientras no abra la preventa en Colombia, la página es solo para el admin.
+// Cambiar a true (y reabrir las reglas de Firestore) cuando se anuncie la preventa Latam.
+const OPEN_TO_ALL = false
 
 function getInitial(name) {
   return name ? name.trim()[0].toUpperCase() : '?'
@@ -66,10 +69,13 @@ export default function DoomsdayPage() {
   const isAdmin = profile?.usernameSlug === ADMIN_SLUG
   const mine = user ? rsvps.find(r => r.uid === user.uid) : null
 
-  // Página solo para usuarios con sesión iniciada
+  // Página solo para usuarios con sesión iniciada.
+  // Mientras OPEN_TO_ALL sea false, solo el admin puede entrar.
   useEffect(() => {
-    if (!loading && !switching && !user) router.push('/login')
-  }, [loading, switching, user, router])
+    if (loading || switching) return
+    if (!user) { router.push('/login'); return }
+    if (!OPEN_TO_ALL && profile?.usernameSlug !== ADMIN_SLUG) router.push('/')
+  }, [loading, switching, user, profile, router])
 
   useEffect(() => {
     if (!db || !user) return
@@ -116,8 +122,8 @@ export default function DoomsdayPage() {
     try { await deleteDoc(doc(db, 'doomsday_rsvps', uid)) } catch (e) { console.error(e) }
   }
 
-  // Sin sesión no se muestra nada (el useEffect redirige a /login)
-  if (loading || switching || !user) {
+  // Sin sesión (o sin permiso mientras está cerrada) no se muestra nada
+  if (loading || switching || !user || (!OPEN_TO_ALL && !isAdmin)) {
     return (
       <main className="dd-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <p style={{ color: 'var(--muted)', fontSize: 14 }}>Cargando…</p>
