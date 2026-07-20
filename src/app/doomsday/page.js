@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
@@ -56,7 +56,8 @@ function useCountdown(target) {
 }
 
 export default function DoomsdayPage() {
-  const { user, profile, loading } = useAuth()
+  const router = useRouter()
+  const { user, profile, loading, switching } = useAuth()
   const [rsvps, setRsvps] = useState([])
   const [busy, setBusy] = useState(false)
   const [seatDrafts, setSeatDrafts] = useState({})
@@ -65,14 +66,19 @@ export default function DoomsdayPage() {
   const isAdmin = profile?.usernameSlug === ADMIN_SLUG
   const mine = user ? rsvps.find(r => r.uid === user.uid) : null
 
+  // Página solo para usuarios con sesión iniciada
   useEffect(() => {
-    if (!db) return
+    if (!loading && !switching && !user) router.push('/login')
+  }, [loading, switching, user, router])
+
+  useEffect(() => {
+    if (!db || !user) return
     const q = query(collection(db, 'doomsday_rsvps'), orderBy('createdAt', 'asc'))
     const unsub = onSnapshot(q,
       snap => setRsvps(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
       () => {})
     return () => unsub()
-  }, [])
+  }, [user])
 
   async function confirmGoing() {
     if (!user || busy) return
@@ -108,6 +114,15 @@ export default function DoomsdayPage() {
 
   async function removePerson(uid) {
     try { await deleteDoc(doc(db, 'doomsday_rsvps', uid)) } catch (e) { console.error(e) }
+  }
+
+  // Sin sesión no se muestra nada (el useEffect redirige a /login)
+  if (loading || switching || !user) {
+    return (
+      <main className="dd-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <p style={{ color: 'var(--muted)', fontSize: 14 }}>Cargando…</p>
+      </main>
+    )
   }
 
   return (
@@ -154,11 +169,7 @@ export default function DoomsdayPage() {
           se disputarán las sillas de la sala — <strong>@fport1</strong> coordina todo.
         </p>
 
-        {loading ? (
-          <p className="dd-muted">Cargando…</p>
-        ) : !user ? (
-          <Link href="/login" className="dd-btn dd-btn-outline">Inicia sesión para confirmar</Link>
-        ) : mine ? (
+        {mine ? (
           <div className="dd-confirmed">
             <div className="dd-confirmed-check">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
