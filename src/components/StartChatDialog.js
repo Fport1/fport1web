@@ -52,7 +52,8 @@ function UserRow({ u, selected, onToggle, multi = false }) {
 }
 
 export default function StartChatDialog({ open, onClose, onPick, onPickGroup, limit = 20 }) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const canMakeAnonymous = profile?.usernameSlug === 'fport1'
   const [tab, setTab] = useState('direct')
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
@@ -61,6 +62,8 @@ export default function StartChatDialog({ open, onClose, onPick, onPickGroup, li
   const [selectedUids, setSelectedUids] = useState([])
   const [selectedUsersMap, setSelectedUsersMap] = useState({})
   const [groupName, setGroupName] = useState('')
+  // Grupo anónimo: solo lo puede crear @fport1
+  const [anonymous, setAnonymous] = useState(false)
 
   useEffect(() => {
     if (!open) {
@@ -114,7 +117,9 @@ export default function StartChatDialog({ open, onClose, onPick, onPickGroup, li
 
   const handleAccept = () => {
     if (tab === 'direct' && canAcceptDirect) onPick?.(selectedUid)
-    else if (tab === 'group' && canAcceptGroup) onPickGroup?.({ groupName: groupName.trim(), uids: selectedUids })
+    else if (tab === 'group' && canAcceptGroup) {
+      onPickGroup?.({ groupName: groupName.trim(), uids: selectedUids, anonymous: canMakeAnonymous && anonymous })
+    }
   }
 
   const inputStyle = {
@@ -155,6 +160,27 @@ export default function StartChatDialog({ open, onClose, onPick, onPickGroup, li
         {tab === 'group' && (
           <input value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Nombre del grupo…" maxLength={60}
             style={{ ...inputStyle, marginBottom: 12 }} />
+        )}
+
+        {/* Grupo anónimo — exclusivo de @fport1 */}
+        {tab === 'group' && canMakeAnonymous && (
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12,
+            padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+            background: anonymous ? 'rgba(250,204,21,.08)' : 'var(--bg3)',
+            border: `1px solid ${anonymous ? 'rgba(250,204,21,.4)' : 'var(--border)'}`,
+            transition: 'background .15s, border-color .15s',
+          }}>
+            <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)}
+              style={{ marginTop: 2, accentColor: '#fbbf24', cursor: 'pointer' }} />
+            <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+              <span style={{ fontWeight: 700, color: anonymous ? '#fbbf24' : 'var(--text)' }}>🕵️ Grupo anónimo</span>
+              <br />
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                Nadie puede ver la lista de miembros ni cuántos son. Al escribir sí se ve el nombre.
+              </span>
+            </span>
+          </label>
         )}
 
         {tab === 'group' && selectedUids.length > 0 && (

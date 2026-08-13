@@ -1,6 +1,7 @@
 import './globals.css'
 import { AuthProvider } from '@/components/auth-context'
 import Nav from '@/components/Nav'
+import ChatNotifier from '@/components/ChatNotifier'
 
 export const metadata = {
   title: 'Fport1',
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <div className="grid-overlay" />
           <Nav />
+          <ChatNotifier />
           {children}
         </AuthProvider>
       </body>

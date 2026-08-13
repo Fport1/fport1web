@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import PerfilNav from '@/components/PerfilNav'
 import { setVisibility, resolvePresence } from '@/lib/presence'
+import { notificar } from '@/lib/notify'
 
 function stripAt(s) { return s ? s.replace(/^@/, '') : s }
 
@@ -135,6 +136,7 @@ export default function PerfilPage() {
         status: 'pending',
         createdAt: serverTimestamp(),
       })
+      notificar({ toUid: target.uid, fromUid: user.uid, type: 'friend_request', from: profile })
     } catch {
       setActionMsg({ type: 'err', text: 'Error al enviar solicitud.' })
     }
@@ -162,6 +164,7 @@ export default function PerfilPage() {
       })
       batch.delete(doc(db, 'friendRequests', req.id))
       await batch.commit()
+      notificar({ toUid: req.fromUid, fromUid: user.uid, type: 'friend_accept', from: profile })
       setActionMsg({ type: 'ok', text: `Ahora eres amigo de ${req.fromProfileName}.` })
     } catch (err) {
       setActionMsg({ type: 'err', text: `Error al aceptar: ${err?.code ?? err?.message ?? 'desconocido'}` })

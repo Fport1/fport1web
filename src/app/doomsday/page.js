@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
 import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
+import { notificar } from '@/lib/notify'
 
 // ── Datos de la función ─────────────────────────────────────
 // Estreno en Colombia: ventana del 16 al 18 de diciembre de 2026.
@@ -203,6 +204,7 @@ export default function DoomsdayPage() {
         photoURL: u.photoURL || null,
         grantedAt: serverTimestamp(),
       })
+      notificar({ toUid: u.uid, fromUid: user.uid, type: 'doomsday_access', from: profile })
       setTerm('')
     } catch (e) { console.error(e) }
   }

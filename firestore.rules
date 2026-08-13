@@ -39,11 +39,48 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.toUid   == request.auth.uid;
     }
 
+    // Notificaciones: cada quien lee y borra las suyas; cualquiera autenticado
+    // puede crear una a nombre propio, y el destinatario solo puede marcarla
+    // como leída (no reescribir su contenido).
+    match /notifications/{nid} {
+      allow read:   if request.auth != null && resource.data.toUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.fromUid == request.auth.uid
+                    && request.resource.data.toUid is string
+                    && request.resource.data.toUid != request.auth.uid
+                    && request.resource.data.read == false;
+      allow update: if request.auth != null && resource.data.toUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+      allow delete: if request.auth != null && resource.data.toUid == request.auth.uid;
+    }
+
     // Conversations (mensajes page)
     match /conversations/{cid} {
-      allow read, update: if request.auth != null && request.auth.uid in resource.data.participantUids;
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participantUids;
+      function esAdminDelGrupo(datos) {
+        return datos.startedBy == request.auth.uid
+            || (datos.admins is list && request.auth.uid in datos.admins);
+      }
+
+      allow read: if request.auth != null && request.auth.uid in resource.data.participantUids;
+
+      // Solo @fport1 puede crear grupos anónimos.
+      allow create: if request.auth != null
+                    && request.auth.uid in request.resource.data.participantUids
+                    && (request.resource.data.get('anonymous', false) == false
+                        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1');
+
+      // Los campos delicados del grupo (incluido 'anonymous', que no se puede
+      // desactivar despues) solo los toca un admin del grupo.
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids
+                    && (
+                      !request.resource.data.diff(resource.data).changedKeys()
+                        .hasAny(['admins','startedBy','isGroup','anonymous','groupName','groupPhotoURL','participantUids'])
+                      || esAdminDelGrupo(resource.data)
+                    );
+
       allow delete: if request.auth != null && request.auth.uid in resource.data.participantUids;
+
       match /messages/{msgId} {
         allow read, write: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.participantUids;

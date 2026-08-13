@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { useUnreadCount } from '@/lib/useUnreadCount'
+import { useUnreadNotifs } from '@/lib/useUnreadNotifs'
 import AvengersLogo from '@/components/AvengersLogo'
 import { useDoomsdayAccess } from '@/lib/useDoomsdayAccess'
 
@@ -30,6 +31,7 @@ export default function Nav() {
   const router = useRouter()
   const { user, profile, loading, switching, signOut, switchToGoogle } = useAuth()
   const unread = useUnreadCount(user?.uid)
+  const unreadNotifs = useUnreadNotifs(user?.uid)
   const { hasAccess: doomsdayAccess } = useDoomsdayAccess(user?.uid, profile?.usernameSlug)
   const [open, setOpen] = useState(false)
   const [savedAccounts, setSavedAccounts] = useState([])
@@ -164,7 +166,7 @@ export default function Nav() {
                 >
                   <div style={{ position: 'relative' }}>
                     <MiniAvatar photoURL={profile?.photoURL} name={myName} size={24} />
-                    {unread > 0 && (
+                    {(unread > 0 || unreadNotifs > 0) && (
                       <span style={{
                         position: 'absolute', top: -3, right: -3,
                         width: 8, height: 8, borderRadius: '50%',
@@ -246,6 +248,24 @@ export default function Nav() {
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       Social
+                    </Link>
+
+                    {/* Notificaciones */}
+                    <Link href="/notificaciones" onClick={() => setOpen(false)}
+                      style={{ ...itemStyle, textDecoration: 'none', display: 'flex' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--text)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sub)' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                      Notificaciones
+                      {unreadNotifs > 0 && (
+                        <span style={{
+                          marginLeft: 'auto', background: 'var(--accent)', color: '#fff',
+                          fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                        }}>
+                          {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                        </span>
+                      )}
                     </Link>
 
                     {/* Mensajes */}

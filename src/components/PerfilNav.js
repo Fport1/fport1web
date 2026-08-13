@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { useUnreadCount } from '@/lib/useUnreadCount'
-import { EnvelopeIcon, UserCircleIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { useUnreadNotifs } from '@/lib/useUnreadNotifs'
+import { EnvelopeIcon, UserCircleIcon, HomeIcon, BellIcon } from '@heroicons/react/24/outline'
 
 function Row({ href, label, Icon, isActive, badge = 0 }) {
   return (
@@ -36,6 +37,7 @@ export default function PerfilNav({ className = '' }) {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const unread = useUnreadCount(user?.uid)
+  const unreadNotifs = useUnreadNotifs(user?.uid)
   const active = href => href === '/perfil' ? pathname === '/perfil' : pathname.startsWith(href)
 
   return (
@@ -45,6 +47,7 @@ export default function PerfilNav({ className = '' }) {
           <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-white/40 select-none">Navegación</div>
           <Row href="/perfil"   label="Perfil"   Icon={UserCircleIcon} isActive={active('/perfil')} />
           <Row href="/mensajes" label="Mensajes" Icon={EnvelopeIcon}   isActive={active('/mensajes')} badge={unread} />
+          <Row href="/notificaciones" label="Notificaciones" Icon={BellIcon} isActive={active('/notificaciones')} badge={unreadNotifs} />
           <div className="h-px bg-white/8 my-1" />
           <button type="button" onClick={() => router.push('/')}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-white/70 hover:bg-white/6 hover:text-white transition-colors cursor-pointer text-left">
