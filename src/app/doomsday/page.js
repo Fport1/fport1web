@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
@@ -15,7 +15,7 @@ import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
 // Estreno en Colombia: ventana del 16 al 18 de diciembre de 2026.
 // La función exacta (noche) se define cuando abra la preventa.
 const PREMIERE = new Date('2026-12-16T20:00:00')
-const HOLD_MS = 3000 // hay que sostener 3 segundos para salirse de la lista
+const LEAVE_WAIT_S = 3 // segundos de espera antes de poder confirmar la salida
 
 function getInitial(name) {
   return name ? name.trim()[0].toUpperCase() : '?'
@@ -55,58 +55,39 @@ function useCountdown(target) {
   }
 }
 
-/** Botón que hay que mantener pulsado 3 segundos para confirmar. */
-function HoldToLeave({ onConfirm, disabled }) {
-  const [progress, setProgress] = useState(0)
-  const [done, setDone] = useState(false)
-  const raf = useRef(null)
-  const startedAt = useRef(0)
+/**
+ * Confirmación de salida: el botón se desbloquea tras unos segundos.
+ * Un solo toque — pensado para que funcione igual de bien desde el celular.
+ */
+function LeaveConfirm({ onConfirm, onCancel }) {
+  const [left, setLeft] = useState(LEAVE_WAIT_S)
+  const [going, setGoing] = useState(false)
 
-  function stop() {
-    if (raf.current) cancelAnimationFrame(raf.current)
-    raf.current = null
-    if (!done) setProgress(0)
-  }
+  useEffect(() => {
+    if (left <= 0) return
+    const id = setTimeout(() => setLeft(l => l - 1), 1000)
+    return () => clearTimeout(id)
+  }, [left])
 
-  function tick() {
-    const elapsed = Date.now() - startedAt.current
-    const p = Math.min(1, elapsed / HOLD_MS)
-    setProgress(p)
-    if (p >= 1) {
-      setDone(true)
-      raf.current = null
-      onConfirm()
-      return
-    }
-    raf.current = requestAnimationFrame(tick)
-  }
-
-  function start(e) {
-    e.preventDefault()
-    if (disabled || done) return
-    startedAt.current = Date.now()
-    raf.current = requestAnimationFrame(tick)
-  }
-
-  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current) }, [])
-
-  const secsLeft = Math.ceil((HOLD_MS - progress * HOLD_MS) / 1000)
+  const ready = left <= 0
 
   return (
-    <button
-      className="dd-hold-btn"
-      onMouseDown={start} onMouseUp={stop} onMouseLeave={stop}
-      onTouchStart={start} onTouchEnd={stop} onTouchCancel={stop}
-      disabled={disabled || done}
-      type="button"
-    >
-      <span className="dd-hold-fill" style={{ width: `${progress * 100}%` }} />
-      <span className="dd-hold-label">
-        {done ? 'Saliendo…'
-          : progress > 0 ? `Mantén pulsado… ${secsLeft}s`
-          : 'Mantén pulsado 3s para salir'}
-      </span>
-    </button>
+    <div className="dd-leave-box">
+      <p className="dd-leave-text">
+        ¿Seguro que ya no vas? Se libera tu cupo y tendrías que volver a confirmar.
+      </p>
+      <div className="dd-leave-actions">
+        <button
+          className="dd-leave-confirm"
+          disabled={!ready || going}
+          onClick={() => { setGoing(true); onConfirm() }}
+          type="button"
+        >
+          {going ? 'Saliendo…' : ready ? 'Sí, ya no voy' : `Espera ${left}s…`}
+        </button>
+        <button className="dd-btn-ghost" onClick={onCancel} type="button">Mejor me quedo</button>
+      </div>
+    </div>
   )
 }
 
@@ -140,14 +121,24 @@ export default function DoomsdayPage() {
   }, [loading, switching, checking, user, hasAccess, router])
 
   // ── Lista de asistentes ──
+  // Solo el admin ve quién está. Los demás únicamente leen su propio registro
+  // (y las reglas de Firestore tampoco les dejan listar la colección).
   useEffect(() => {
     if (!db || !user || !hasAccess) return
-    const q = query(collection(db, 'doomsday_rsvps'), orderBy('createdAt', 'asc'))
-    const unsub = onSnapshot(q,
-      snap => setRsvps(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
+
+    if (isAdmin) {
+      const q = query(collection(db, 'doomsday_rsvps'), orderBy('createdAt', 'asc'))
+      const unsub = onSnapshot(q,
+        snap => setRsvps(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
+        () => {})
+      return () => unsub()
+    }
+
+    const unsub = onSnapshot(doc(db, 'doomsday_rsvps', user.uid),
+      snap => setRsvps(snap.exists() ? [{ uid: snap.id, ...snap.data() }] : []),
       () => {})
     return () => unsub()
-  }, [user, hasAccess])
+  }, [user, hasAccess, isAdmin])
 
   // ── Accesos concedidos (solo admin) ──
   useEffect(() => {
@@ -293,6 +284,18 @@ export default function DoomsdayPage() {
           Dir. Anthony &amp; Joe Russo · Robert Downey Jr. es <strong>Doctor Doom</strong>
         </p>
 
+        {/* Sinopsis y código de vestir */}
+        <div className="dd-hero-facts">
+          <div className="dd-fact">
+            <span className="dd-fact-label">Sinopsis</span>
+            <span className="dd-fact-value dd-fact-big">3 Universos</span>
+          </div>
+          <div className="dd-fact">
+            <span className="dd-fact-label">Código de vestir</span>
+            <span className="dd-fact-value">🎭 Gala y túnica verde</span>
+          </div>
+        </div>
+
         <div className="dd-countdown">
           {[[days, 'días'], [hours, 'horas'], [mins, 'min'], [secs, 'seg']].map(([v, l]) => (
             <div key={l} className="dd-count-box">
@@ -300,20 +303,6 @@ export default function DoomsdayPage() {
               <span className="dd-count-label">{l}</span>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ── Sinopsis + código de vestir ── */}
-      <section className="dd-card">
-        <h2 className="dd-section-title">📖 Sinopsis</h2>
-        <p className="dd-synopsis">3 Universos</p>
-
-        <div className="dd-dress">
-          <span className="dd-dress-icon">🎭</span>
-          <div>
-            <p className="dd-dress-label">Código de vestir</p>
-            <p className="dd-dress-value">Gala y túnica verde</p>
-          </div>
         </div>
       </section>
 
@@ -346,15 +335,7 @@ export default function DoomsdayPage() {
             </div>
 
             {leaving && !locked && (
-              <div className="dd-leave-box">
-                <p className="dd-leave-text">
-                  ¿Seguro que ya no vas? Mantén pulsado el botón <strong>3 segundos</strong> para confirmar.
-                </p>
-                <div className="dd-leave-actions">
-                  <HoldToLeave onConfirm={leaveList} />
-                  <button className="dd-btn-ghost" onClick={() => setLeaving(false)}>Mejor me quedo</button>
-                </div>
-              </div>
+              <LeaveConfirm onConfirm={leaveList} onCancel={() => setLeaving(false)} />
             )}
           </>
         ) : (
@@ -364,30 +345,16 @@ export default function DoomsdayPage() {
         )}
       </section>
 
-      {/* ── Lista pública ── */}
-      <section className="dd-card">
-        <h2 className="dd-section-title">
-          🦸 Reclutados <span className="dd-count-pill">{rsvps.length}</span>
-        </h2>
-
-        {rsvps.length === 0 ? (
-          <p className="dd-muted">Nadie ha confirmado todavía. ¡Sé el primero!</p>
-        ) : (
-          <div className="dd-list">
-            {rsvps.map(r => (
-              <div key={r.uid} className="dd-person">
-                <Avatar photoURL={r.photoURL} name={r.profileName} />
-                <div className="dd-person-info">
-                  <p className="dd-person-name">{r.profileName}</p>
-                  {r.username && <p className="dd-person-user">@{String(r.username).replace(/^@/, '')}</p>}
-                </div>
-                {r.bought && <span className="dd-tag dd-tag-ok">🎟️ Con boleta</span>}
-                {r.seat && <span className="dd-tag">💺 {r.seat}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* ── La lista es privada: solo la ve el admin ── */}
+      {!isAdmin && (
+        <section className="dd-card">
+          <h2 className="dd-section-title">🔒 Lista privada</h2>
+          <p className="dd-section-sub" style={{ marginBottom: 0 }}>
+            Quién va y quién no lo maneja <strong>@fport1</strong>. Nadie más puede ver
+            la lista de asistentes, ni siquiera cuántos van.
+          </p>
+        </section>
+      )}
 
       {/* ── Info de la función ── */}
       <section className="dd-card">
@@ -502,7 +469,9 @@ export default function DoomsdayPage() {
 
           {/* Control de boletas */}
           <section className="dd-card dd-gold">
-            <h2 className="dd-gold-title">🎫 Control de boletas y sillas</h2>
+            <h2 className="dd-gold-title">
+              🎫 Reclutados, boletas y sillas <span className="dd-count-pill">{rsvps.length}</span>
+            </h2>
             <p className="dd-gold-sub">
               Marca quién ya compró. Al marcar <strong>Comprada</strong> esa persona queda bloqueada
               y no puede salirse de la lista.
@@ -634,25 +603,27 @@ export default function DoomsdayPage() {
         .dd-section-sub strong { color: #86efac; }
         .dd-muted { color: var(--muted); font-size: 14px; }
 
-        /* Sinopsis */
-        .dd-synopsis {
-          font-family: 'Rajdhani', sans-serif;
-          font-size: 30px; font-weight: 700; letter-spacing: .06em;
-          color: #4ade80; margin: 6px 0 22px;
-          text-shadow: 0 0 26px rgba(34,197,94,.35);
+        /* Sinopsis y código de vestir, dentro del hero */
+        .dd-hero-facts {
+          display: flex; justify-content: center; gap: 12px;
+          flex-wrap: wrap; margin-top: 20px;
         }
-        .dd-dress {
-          display: flex; align-items: center; gap: 14px;
+        .dd-fact {
+          display: flex; flex-direction: column; align-items: center; gap: 5px;
           background: rgba(34,197,94,.06);
-          border: 1px solid rgba(34,197,94,.25);
-          border-radius: 12px; padding: 14px 18px;
+          border: 1px solid rgba(34,197,94,.22);
+          border-radius: 12px; padding: 12px 22px; min-width: 170px;
         }
-        .dd-dress-icon { font-size: 24px; }
-        .dd-dress-label {
-          font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-          color: var(--muted); margin: 0 0 2px;
+        .dd-fact-label {
+          font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+          color: var(--muted);
         }
-        .dd-dress-value { font-size: 16px; font-weight: 600; color: #86efac; margin: 0; }
+        .dd-fact-value { font-size: 15px; font-weight: 600; color: #86efac; }
+        .dd-fact-big {
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 24px; font-weight: 700; letter-spacing: .06em;
+          color: #4ade80; text-shadow: 0 0 22px rgba(34,197,94,.35);
+        }
 
         /* Botones */
         .dd-btn {
@@ -694,21 +665,18 @@ export default function DoomsdayPage() {
         .dd-leave-text { font-size: 13px; color: var(--sub); margin: 0 0 14px; line-height: 1.6; }
         .dd-leave-text strong { color: #f87171; }
         .dd-leave-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .dd-hold-btn {
-          position: relative; overflow: hidden;
+        .dd-leave-confirm {
           padding: 12px 26px; border-radius: 10px;
-          border: 1px solid rgba(239,68,68,.5); background: rgba(239,68,68,.08);
+          border: 1px solid rgba(239,68,68,.5); background: rgba(239,68,68,.12);
           color: #fca5a5; font-size: 13px; font-weight: 700; cursor: pointer;
-          user-select: none; -webkit-user-select: none; touch-action: none;
-          transition: border-color .2s;
+          transition: background .2s, border-color .2s, opacity .2s;
         }
-        .dd-hold-btn:hover { border-color: rgba(239,68,68,.8); }
-        .dd-hold-btn:disabled { opacity: .6; cursor: default; }
-        .dd-hold-fill {
-          position: absolute; left: 0; top: 0; bottom: 0;
-          background: rgba(239,68,68,.35); transition: width .05s linear;
+        .dd-leave-confirm:hover:not(:disabled) { background: rgba(239,68,68,.22); border-color: rgba(239,68,68,.8); }
+        .dd-leave-confirm:disabled {
+          opacity: .5; cursor: not-allowed;
+          border-color: rgba(239,68,68,.25); background: transparent;
+          font-variant-numeric: tabular-nums;
         }
-        .dd-hold-label { position: relative; z-index: 1; }
         .dd-btn-ghost {
           background: none; border: none; color: var(--sub);
           font-size: 13px; cursor: pointer; text-decoration: underline;

@@ -82,11 +82,13 @@ service cloud.firestore {
       allow write: if isDoomsdayAdmin();
     }
 
-    // Lista de asistentes. Solo la ve quien tiene acceso.
-    // El usuario puede entrar y salirse solo, PERO no puede salirse si ya
-    // compró boleta, ni marcarse la boleta a sí mismo (eso es del admin).
+    // Lista de asistentes. SOLO el admin puede ver quién está: los demás
+    // únicamente leen su propio registro y no pueden listar la coleccion.
+    // El usuario entra y se sale solo, PERO no puede salirse si ya compró
+    // boleta, ni marcarse la boleta a sí mismo (eso es del admin).
     match /doomsday_rsvps/{uid} {
-      allow read:   if hasDoomsdayAccess();
+      allow get:    if isDoomsdayAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow list:   if isDoomsdayAdmin();
       allow create: if hasDoomsdayAccess() && request.auth.uid == uid
                     && request.resource.data.bought == false
                     && request.resource.data.tickets == 0;
