@@ -119,6 +119,22 @@ service cloud.firestore {
       allow write: if isDoomsdayAdmin();
     }
 
+    // Contador público de asistentes. Existe para poder enseñar CUÁNTOS van sin
+    // dejar leer QUIÉNES: la colección de arriba no se puede listar, así que el
+    // número no se puede sacar de ahí. Cada quien lo ajusta en ±1 al entrar o
+    // salir de la lista; el admin puede corregirlo si se descuadra.
+    match /doomsday_meta/{docId} {
+      allow read:  if hasDoomsdayAccess();
+      allow write: if isDoomsdayAdmin();
+      allow write: if hasDoomsdayAccess()
+                   && docId == 'stats'
+                   && request.resource.data.keys().hasOnly(['count'])
+                   && request.resource.data.count is int
+                   && request.resource.data.count >= 0
+                   && (!exists(/databases/$(database)/documents/doomsday_meta/stats)
+                       || (request.resource.data.count - resource.data.count) in [1, -1]);
+    }
+
     // Lista de asistentes. SOLO el admin puede ver quién está: los demás
     // únicamente leen su propio registro y no pueden listar la coleccion.
     // El usuario entra y se sale solo, PERO no puede salirse si ya compró

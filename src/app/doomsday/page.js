@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
   collection, doc, getDocs, onSnapshot, orderBy, query,
-  setDoc, deleteDoc, updateDoc, serverTimestamp, limit,
+  setDoc, deleteDoc, updateDoc, serverTimestamp, limit, increment,
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
 import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
@@ -99,6 +99,7 @@ export default function DoomsdayPage() {
 
   const [rsvps, setRsvps]     = useState([])
   const [access, setAccess]   = useState([])
+  const [goingCount, setGoingCount] = useState(null)
   const [busy, setBusy]       = useState(false)
   const [leaving, setLeaving] = useState(false)
 
@@ -141,6 +142,16 @@ export default function DoomsdayPage() {
     return () => unsub()
   }, [user, hasAccess, isAdmin])
 
+  // Cuántos van. Va en un documento aparte porque la colección de asistentes
+  // no se puede listar: así se ve el número sin poder ver los nombres.
+  useEffect(() => {
+    if (!db || !user || !hasAccess) return
+    const unsub = onSnapshot(doc(db, 'doomsday_meta', 'stats'),
+      snap => setGoingCount(snap.exists() ? (snap.data().count ?? 0) : 0),
+      () => setGoingCount(null))
+    return () => unsub()
+  }, [user, hasAccess])
+
   // ── Accesos concedidos (solo admin) ──
   useEffect(() => {
     if (!db || !isAdmin) return
@@ -166,14 +177,26 @@ export default function DoomsdayPage() {
         boughtFor: null,
         createdAt: serverTimestamp(),
       })
+      await bumpCount(1)
     } catch (e) { console.error(e) }
     setBusy(false)
   }
 
   async function leaveList() {
     if (!user || locked) return
-    try { await deleteDoc(doc(db, 'doomsday_rsvps', user.uid)) } catch (e) { console.error(e) }
+    try {
+      await deleteDoc(doc(db, 'doomsday_rsvps', user.uid))
+      await bumpCount(-1)
+    } catch (e) { console.error(e) }
     setLeaving(false)
+  }
+
+  /** Ajusta el contador público en ±1. Si falla, no se pierde nada: el admin
+   *  siempre ve la lista real y puede recalcularlo. */
+  async function bumpCount(delta) {
+    try {
+      await setDoc(doc(db, 'doomsday_meta', 'stats'), { count: increment(delta) }, { merge: true })
+    } catch (e) { console.warn('[doomsday:contador]', e?.code) }
   }
 
   // ── Admin: búsqueda de usuarios ──
@@ -247,7 +270,17 @@ export default function DoomsdayPage() {
   }
 
   async function removePerson(uid) {
-    try { await deleteDoc(doc(db, 'doomsday_rsvps', uid)) } catch (e) { console.error(e) }
+    try {
+      await deleteDoc(doc(db, 'doomsday_rsvps', uid))
+      await bumpCount(-1)
+    } catch (e) { console.error(e) }
+  }
+
+  /** Recalcula el contador con la lista real (solo admin, que sí puede verla). */
+  async function resyncCount() {
+    try {
+      await setDoc(doc(db, 'doomsday_meta', 'stats'), { count: rsvps.length }, { merge: true })
+    } catch (e) { console.error(e) }
   }
 
   // Sin sesión o sin permiso no se muestra nada
@@ -347,13 +380,18 @@ export default function DoomsdayPage() {
         )}
       </section>
 
-      {/* ── La lista es privada: solo la ve el admin ── */}
+      {/* ── Reclutados: se ve cuántos van, nunca quiénes ── */}
       {!isAdmin && (
         <section className="dd-card">
-          <h2 className="dd-section-title">🔒 Lista privada</h2>
-          <p className="dd-section-sub" style={{ marginBottom: 0 }}>
-            Quién va y quién no lo maneja <strong>@fport1</strong>. Nadie más puede ver
-            la lista de asistentes, ni siquiera cuántos van.
+          <h2 className="dd-section-title">🦸 Reclutados</h2>
+          <div className="dd-recruited">
+            <span className="dd-recruited-num">{goingCount ?? '—'}</span>
+            <span className="dd-recruited-label">
+              {goingCount === 1 ? 'persona confirmada' : 'personas confirmadas'}
+            </span>
+          </div>
+          <p className="dd-section-sub" style={{ marginTop: 18, marginBottom: 0 }}>
+            🔒 Solo se muestra el número. Quién va y quién no lo maneja <strong>@fport1</strong>.
           </p>
         </section>
       )}
@@ -398,6 +436,18 @@ export default function DoomsdayPage() {
                 <span className="dd-stat-num">{access.length}</span>
                 <span className="dd-stat-label">con acceso</span>
               </div>
+            </div>
+
+            {/* El contador que ve el resto vive en un documento aparte; si se
+                descuadra, aquí se vuelve a cuadrar con la lista real. */}
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span className="dd-gold-sub" style={{ margin: 0 }}>
+                Los demás ven <strong>{goingCount ?? '—'}</strong> confirmados
+                {goingCount !== null && goingCount !== rsvps.length && ' (no cuadra con la lista real)'}
+              </span>
+              {goingCount !== rsvps.length && (
+                <button className="dd-gold-btn" onClick={resyncCount}>Cuadrar contador</button>
+              )}
             </div>
           </section>
 
@@ -604,6 +654,21 @@ export default function DoomsdayPage() {
         .dd-section-sub { color: var(--sub); font-size: 14px; line-height: 1.7; margin-bottom: 20px; }
         .dd-section-sub strong { color: #86efac; }
         .dd-muted { color: var(--muted); font-size: 14px; }
+
+        /* Contador de reclutados (vista de todos) */
+        .dd-recruited {
+          display: flex; align-items: baseline; justify-content: center; gap: 12px;
+          background: rgba(34,197,94,.06);
+          border: 1px solid rgba(34,197,94,.25);
+          border-radius: 14px; padding: 24px 20px; margin-top: 14px;
+        }
+        .dd-recruited-num {
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 54px; font-weight: 700; line-height: 1;
+          color: #4ade80; text-shadow: 0 0 30px rgba(34,197,94,.45);
+          font-variant-numeric: tabular-nums;
+        }
+        .dd-recruited-label { font-size: 14px; color: var(--sub); }
 
         /* Sinopsis y código de vestir, dentro del hero */
         .dd-hero-facts {

@@ -79,6 +79,7 @@ import { Suspense } from "react";
 import Badges from "@/components/Badges";
 import { resolvePresence } from "@/lib/presence";
 import { notificar, notificarVarios } from "@/lib/notify";
+import { markReadLocal, readLocalAt } from "@/lib/readLocal";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker from "@/components/GifPicker";
 import AudioMessage from "@/components/AudioMessage";
@@ -2097,6 +2098,9 @@ function uidPair(a, b) {
 
 async function markConversationRead(cid, user, db) {
     if (!user?.uid || !cid) return;
+    // Antes de escribir: así, cuando llegue el snapshot local con el
+    // serverTimestamp todavía vacío, el chat ya cuenta como leído.
+    markReadLocal(cid);
     try {
         await updateDoc(doc(db, "conversations", cid), {
             [`readAt.${user.uid}`]: serverTimestamp(),
@@ -2843,7 +2847,9 @@ function MensajesPageContent() {
     function convUnread(c) {
         const lastAt = tsToDate(c?.lastMessage?.at);
         const myReadAt = tsToDate(c?.readAt?.[user?.uid]);
-        return !!lastAt && (!myReadAt || lastAt > myReadAt) &&
+        // Vale la lectura más reciente: la del servidor o la de este navegador.
+        const readMs = Math.max(myReadAt?.getTime() || 0, readLocalAt(c?.id));
+        return !!lastAt && lastAt.getTime() > readMs &&
             c?.lastMessage?.senderUid && c.lastMessage.senderUid !== user?.uid;
     }
     function convMatchesFilter(c) {
@@ -4273,13 +4279,14 @@ function MensajesPageContent() {
         return () => { cancelled = true; };
     }, [user?.uid, userDoc, activeConversation, inviteBypass, inviteOwnerUid, otherUid]);
 
+    // pt-[84px]: el nav del sitio es fijo y mide 60px, más un respiro de 24
     return (
-        <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
-            <aside className="hidden md:block md:sticky md:top-4 h-fit">
+        <div className="mx-auto max-w-7xl px-4 pt-[84px] pb-6 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
+            <aside className="hidden md:block md:sticky md:top-[84px] h-fit">
                 <PerfilNav />
             </aside>
 
-            <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-140px)] min-h-0">
+            <div className="grid grid-cols-[340px_1fr] gap-4 h-[calc(100vh-108px)] min-h-0">
                 {/* lista */}
                 <aside
                     className={clsx(
@@ -4468,10 +4475,12 @@ function MensajesPageContent() {
 
                             const lastAt = tsToDate(c?.lastMessage?.at);
                             const myReadAt = tsToDate(c?.readAt?.[user?.uid]);
+                            // Vale la lectura más reciente: servidor o navegador.
+                            const readMs = Math.max(myReadAt?.getTime() || 0, readLocalAt(c.id));
 
                             const unread =
                                 !!lastAt &&
-                                (!myReadAt || lastAt > myReadAt) &&
+                                lastAt.getTime() > readMs &&
                                 c?.lastMessage?.senderUid &&
                                 c.lastMessage.senderUid !== user?.uid;
 
