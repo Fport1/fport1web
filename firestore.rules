@@ -63,15 +63,36 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
     }
 
-    // Avengers: Doomsday — lista de asistentes al estreno
-    // CERRADA al público hasta la preventa Latam: solo @fport1 puede leer/escribir.
-    // Al abrirla, restaurar: read para autenticados + create/update/delete del propio uid.
+    // ── Avengers: Doomsday ─────────────────────────────────────
+    function isDoomsdayAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
+    }
+    function hasDoomsdayAccess() {
+      return request.auth != null
+        && (isDoomsdayAdmin()
+            || exists(/databases/$(database)/documents/doomsday_access/$(request.auth.uid)));
+    }
+
+    // Accesos concedidos por el admin. Cada quien puede consultar el suyo
+    // (el nav lo necesita); listar y modificar es solo del admin.
+    match /doomsday_access/{uid} {
+      allow get:   if request.auth != null;
+      allow list:  if isDoomsdayAdmin();
+      allow write: if isDoomsdayAdmin();
+    }
+
+    // Lista de asistentes. Solo la ve quien tiene acceso.
+    // El usuario puede entrar y salirse solo, PERO no puede salirse si ya
+    // compró boleta, ni marcarse la boleta a sí mismo (eso es del admin).
     match /doomsday_rsvps/{uid} {
-      function isDoomsdayAdmin() {
-        return request.auth != null
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
-      }
-      allow read, write: if isDoomsdayAdmin();
+      allow read:   if hasDoomsdayAccess();
+      allow create: if hasDoomsdayAccess() && request.auth.uid == uid
+                    && request.resource.data.bought == false
+                    && request.resource.data.tickets == 0;
+      allow delete: if hasDoomsdayAccess() && request.auth.uid == uid
+                    && resource.data.bought != true;
+      allow write:  if isDoomsdayAdmin();
     }
 
     match /chats/{chatId} {

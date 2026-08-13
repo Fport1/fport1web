@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { useUnreadCount } from '@/lib/useUnreadCount'
 import AvengersLogo from '@/components/AvengersLogo'
+import { useDoomsdayAccess } from '@/lib/useDoomsdayAccess'
 
 const ACCOUNTS_KEY = 'fport1_accounts'
 // Botón Doomsday visible hasta el 16 de diciembre de 2026 (día del estreno en Latam es el 17)
@@ -29,6 +30,7 @@ export default function Nav() {
   const router = useRouter()
   const { user, profile, loading, switching, signOut, switchToGoogle } = useAuth()
   const unread = useUnreadCount(user?.uid)
+  const { hasAccess: doomsdayAccess } = useDoomsdayAccess(user?.uid, profile?.usernameSlug)
   const [open, setOpen] = useState(false)
   const [savedAccounts, setSavedAccounts] = useState([])
   const ref = useRef(null)
@@ -120,8 +122,8 @@ export default function Nav() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          {/* Avengers: Doomsday — cerrada al público hasta la preventa Latam; solo @fport1 */}
-          {!loading && user && profile?.usernameSlug === 'fport1' && Date.now() < DOOMSDAY_DEADLINE && (
+          {/* Avengers: Doomsday — admin y usuarios con acceso concedido */}
+          {!loading && user && doomsdayAccess && Date.now() < DOOMSDAY_DEADLINE && (
             <Link
               href="/doomsday"
               aria-label="Avengers: Doomsday"

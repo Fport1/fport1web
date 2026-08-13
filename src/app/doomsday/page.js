@@ -1,24 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
-  collection, doc, onSnapshot, orderBy, query,
-  setDoc, deleteDoc, updateDoc, serverTimestamp,
+  collection, doc, getDocs, onSnapshot, orderBy, query,
+  setDoc, deleteDoc, updateDoc, serverTimestamp, limit,
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
+import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
 
-// ── Datos reales de la película ─────────────────────────────
-// Estreno internacional: 18 dic 2026 · Latam (CO/MX): 17 dic 2026
-// Duración: 2h 45min · Dir: Anthony & Joe Russo · RDJ es Doctor Doom
-// Preventa EE.UU.: 20 de julio 2026 · Latam: por anunciar
-const PREMIERE = new Date('2026-12-17T00:00:00')
-const ADMIN_SLUG = 'fport1'
-// Mientras no abra la preventa en Colombia, la página es solo para el admin.
-// Cambiar a true (y reabrir las reglas de Firestore) cuando se anuncie la preventa Latam.
-const OPEN_TO_ALL = false
+// ── Datos de la función ─────────────────────────────────────
+// Estreno en Colombia: ventana del 16 al 18 de diciembre de 2026.
+// La función exacta (noche) se define cuando abra la preventa.
+const PREMIERE = new Date('2026-12-16T20:00:00')
+const HOLD_MS = 3000 // hay que sostener 3 segundos para salirse de la lista
 
 function getInitial(name) {
   return name ? name.trim()[0].toUpperCase() : '?'
@@ -58,33 +55,108 @@ function useCountdown(target) {
   }
 }
 
+/** Botón que hay que mantener pulsado 3 segundos para confirmar. */
+function HoldToLeave({ onConfirm, disabled }) {
+  const [progress, setProgress] = useState(0)
+  const [done, setDone] = useState(false)
+  const raf = useRef(null)
+  const startedAt = useRef(0)
+
+  function stop() {
+    if (raf.current) cancelAnimationFrame(raf.current)
+    raf.current = null
+    if (!done) setProgress(0)
+  }
+
+  function tick() {
+    const elapsed = Date.now() - startedAt.current
+    const p = Math.min(1, elapsed / HOLD_MS)
+    setProgress(p)
+    if (p >= 1) {
+      setDone(true)
+      raf.current = null
+      onConfirm()
+      return
+    }
+    raf.current = requestAnimationFrame(tick)
+  }
+
+  function start(e) {
+    e.preventDefault()
+    if (disabled || done) return
+    startedAt.current = Date.now()
+    raf.current = requestAnimationFrame(tick)
+  }
+
+  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current) }, [])
+
+  const secsLeft = Math.ceil((HOLD_MS - progress * HOLD_MS) / 1000)
+
+  return (
+    <button
+      className="dd-hold-btn"
+      onMouseDown={start} onMouseUp={stop} onMouseLeave={stop}
+      onTouchStart={start} onTouchEnd={stop} onTouchCancel={stop}
+      disabled={disabled || done}
+      type="button"
+    >
+      <span className="dd-hold-fill" style={{ width: `${progress * 100}%` }} />
+      <span className="dd-hold-label">
+        {done ? 'Saliendo…'
+          : progress > 0 ? `Mantén pulsado… ${secsLeft}s`
+          : 'Mantén pulsado 3s para salir'}
+      </span>
+    </button>
+  )
+}
+
 export default function DoomsdayPage() {
   const router = useRouter()
   const { user, profile, loading, switching } = useAuth()
-  const [rsvps, setRsvps] = useState([])
-  const [busy, setBusy] = useState(false)
-  const [seatDrafts, setSeatDrafts] = useState({})
+  const { isAdmin, hasAccess, checking } = useDoomsdayAccess(user?.uid, profile?.usernameSlug)
+
+  const [rsvps, setRsvps]     = useState([])
+  const [access, setAccess]   = useState([])
+  const [busy, setBusy]       = useState(false)
+  const [leaving, setLeaving] = useState(false)
+
+  // Admin: búsqueda de usuarios
+  const [allUsers, setAllUsers]   = useState(null)
+  const [term, setTerm]           = useState('')
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+  // Admin: borradores de los campos por persona
+  const [drafts, setDrafts] = useState({})
+
   const { days, hours, mins, secs } = useCountdown(PREMIERE)
-
-  const isAdmin = profile?.usernameSlug === ADMIN_SLUG
   const mine = user ? rsvps.find(r => r.uid === user.uid) : null
+  const locked = !!mine?.bought // si ya compró boleta no puede salirse
 
-  // Página solo para usuarios con sesión iniciada.
-  // Mientras OPEN_TO_ALL sea false, solo el admin puede entrar.
+  // ── Acceso: sin sesión al login; con sesión pero sin permiso, a la home ──
   useEffect(() => {
-    if (loading || switching) return
+    if (loading || switching || checking) return
     if (!user) { router.push('/login'); return }
-    if (!OPEN_TO_ALL && profile?.usernameSlug !== ADMIN_SLUG) router.push('/')
-  }, [loading, switching, user, profile, router])
+    if (!hasAccess) router.push('/')
+  }, [loading, switching, checking, user, hasAccess, router])
 
+  // ── Lista de asistentes ──
   useEffect(() => {
-    if (!db || !user) return
+    if (!db || !user || !hasAccess) return
     const q = query(collection(db, 'doomsday_rsvps'), orderBy('createdAt', 'asc'))
     const unsub = onSnapshot(q,
       snap => setRsvps(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
       () => {})
     return () => unsub()
-  }, [user])
+  }, [user, hasAccess])
+
+  // ── Accesos concedidos (solo admin) ──
+  useEffect(() => {
+    if (!db || !isAdmin) return
+    const unsub = onSnapshot(collection(db, 'doomsday_access'),
+      snap => setAccess(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
+      () => {})
+    return () => unsub()
+  }, [isAdmin])
 
   async function confirmGoing() {
     if (!user || busy) return
@@ -94,27 +166,90 @@ export default function DoomsdayPage() {
         uid: user.uid,
         profileName: profile?.profileName || user.displayName || user.email?.split('@')[0] || 'Sin nombre',
         username: profile?.username || null,
+        email: user.email || null,
         photoURL: profile?.photoURL || user.photoURL || null,
         seat: null,
+        bought: false,
+        tickets: 0,
+        boughtFor: null,
         createdAt: serverTimestamp(),
       })
     } catch (e) { console.error(e) }
     setBusy(false)
   }
 
-  async function cancelGoing() {
-    if (!user || busy) return
-    setBusy(true)
+  async function leaveList() {
+    if (!user || locked) return
     try { await deleteDoc(doc(db, 'doomsday_rsvps', user.uid)) } catch (e) { console.error(e) }
-    setBusy(false)
+    setLeaving(false)
   }
 
-  // ── Admin actions ──
-  async function saveSeat(uid) {
-    const seat = (seatDrafts[uid] ?? '').trim()
+  // ── Admin: búsqueda de usuarios ──
+  async function loadUsers() {
+    if (allUsers || loadingUsers) return
+    setLoadingUsers(true)
     try {
-      await updateDoc(doc(db, 'doomsday_rsvps', uid), { seat: seat || null })
-      setSeatDrafts(d => ({ ...d, [uid]: undefined }))
+      const snap = await getDocs(query(collection(db, 'users'), limit(300)))
+      setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
+    } catch (e) { console.error(e) }
+    setLoadingUsers(false)
+  }
+
+  const t = term.trim().toLowerCase()
+  const results = !t ? [] : (allUsers || []).filter(u => {
+    const hay = [u.profileName, u.username, u.usernameSlug, u.email]
+      .filter(Boolean).join(' ').toLowerCase()
+    return hay.includes(t)
+  }).slice(0, 8)
+
+  async function grantAccess(u) {
+    try {
+      await setDoc(doc(db, 'doomsday_access', u.uid), {
+        uid: u.uid,
+        profileName: u.profileName || u.usernameSlug || 'Sin nombre',
+        username: u.username || null,
+        email: u.email || null,
+        photoURL: u.photoURL || null,
+        grantedAt: serverTimestamp(),
+      })
+      setTerm('')
+    } catch (e) { console.error(e) }
+  }
+
+  async function revokeAccess(uid) {
+    try { await deleteDoc(doc(db, 'doomsday_access', uid)) } catch (e) { console.error(e) }
+  }
+
+  // ── Admin: control de boletas ──
+  function draftOf(r) {
+    return drafts[r.uid] ?? {
+      seat: r.seat ?? '', tickets: r.tickets ?? 0, boughtFor: r.boughtFor ?? '',
+    }
+  }
+
+  function setDraft(uid, patch) {
+    setDrafts(d => ({ ...d, [uid]: { ...(d[uid] ?? {}), ...patch } }))
+  }
+
+  async function toggleBought(r) {
+    const next = !r.bought
+    try {
+      await updateDoc(doc(db, 'doomsday_rsvps', r.uid), {
+        bought: next,
+        tickets: next ? Math.max(1, Number(draftOf(r).tickets) || 1) : 0,
+      })
+    } catch (e) { console.error(e) }
+  }
+
+  async function saveRow(r) {
+    const d = draftOf(r)
+    try {
+      await updateDoc(doc(db, 'doomsday_rsvps', r.uid), {
+        seat: String(d.seat).trim() || null,
+        tickets: Math.max(0, Number(d.tickets) || 0),
+        boughtFor: String(d.boughtFor).trim() || null,
+      })
+      setDrafts(x => ({ ...x, [r.uid]: undefined }))
     } catch (e) { console.error(e) }
   }
 
@@ -122,8 +257,8 @@ export default function DoomsdayPage() {
     try { await deleteDoc(doc(db, 'doomsday_rsvps', uid)) } catch (e) { console.error(e) }
   }
 
-  // Sin sesión (o sin permiso mientras está cerrada) no se muestra nada
-  if (loading || switching || !user || (!OPEN_TO_ALL && !isAdmin)) {
+  // Sin sesión o sin permiso no se muestra nada
+  if (loading || switching || checking || !user || !hasAccess) {
     return (
       <main className="dd-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <p style={{ color: 'var(--muted)', fontSize: 14 }}>Cargando…</p>
@@ -131,16 +266,18 @@ export default function DoomsdayPage() {
     )
   }
 
+  const totalTickets = rsvps.reduce((n, r) => n + (Number(r.tickets) || 0), 0)
+  const boughtCount  = rsvps.filter(r => r.bought).length
+
   return (
     <main className="dd-page">
-      {/* Ambient glow */}
       <div className="dd-glow" />
 
       {/* ── Hero ── */}
       <section className="dd-hero">
         <div className="dd-badge">
           <span className="dd-badge-dot" />
-          Preventa EE.UU.: 20 de julio · Latam: por anunciar
+          Preventa Latam: se rumora que mañana
         </div>
 
         <div className="dd-logo-wrap">
@@ -152,11 +289,10 @@ export default function DoomsdayPage() {
         </h1>
 
         <p className="dd-meta">
-          Estreno en Colombia: <strong>17 de diciembre de 2026</strong> · 2h 45min<br />
-          Dir. Anthony & Joe Russo · Robert Downey Jr. es <strong>Doctor Doom</strong>
+          Estreno en Colombia: <strong>16 al 18 de diciembre de 2026</strong><br />
+          Dir. Anthony &amp; Joe Russo · Robert Downey Jr. es <strong>Doctor Doom</strong>
         </p>
 
-        {/* Countdown */}
         <div className="dd-countdown">
           {[[days, 'días'], [hours, 'horas'], [mins, 'min'], [secs, 'seg']].map(([v, l]) => (
             <div key={l} className="dd-count-box">
@@ -164,6 +300,20 @@ export default function DoomsdayPage() {
               <span className="dd-count-label">{l}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Sinopsis + código de vestir ── */}
+      <section className="dd-card">
+        <h2 className="dd-section-title">📖 Sinopsis</h2>
+        <p className="dd-synopsis">3 Universos</p>
+
+        <div className="dd-dress">
+          <span className="dd-dress-icon">🎭</span>
+          <div>
+            <p className="dd-dress-label">Código de vestir</p>
+            <p className="dd-dress-value">Gala y túnica verde</p>
+          </div>
         </div>
       </section>
 
@@ -176,15 +326,37 @@ export default function DoomsdayPage() {
         </p>
 
         {mine ? (
-          <div className="dd-confirmed">
-            <div className="dd-confirmed-check">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-              <span>Estás en la lista{mine.seat ? <> — silla <strong>{mine.seat}</strong></> : ''}</span>
+          <>
+            <div className="dd-confirmed">
+              <div className="dd-status-pill">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                <span>Estás en la lista{mine.seat ? <> — silla <strong>{mine.seat}</strong></> : ''}</span>
+              </div>
+
+              {locked ? (
+                <div className="dd-status-pill dd-status-locked">
+                  <span>🔒</span>
+                  <span>Boleta comprada — ya no puedes salirte</span>
+                </div>
+              ) : !leaving ? (
+                <button className="dd-status-pill dd-status-danger" onClick={() => setLeaving(true)}>
+                  Ya no voy 😔
+                </button>
+              ) : null}
             </div>
-            <button onClick={cancelGoing} disabled={busy} className="dd-btn dd-btn-danger">
-              Ya no voy 😔
-            </button>
-          </div>
+
+            {leaving && !locked && (
+              <div className="dd-leave-box">
+                <p className="dd-leave-text">
+                  ¿Seguro que ya no vas? Mantén pulsado el botón <strong>3 segundos</strong> para confirmar.
+                </p>
+                <div className="dd-leave-actions">
+                  <HoldToLeave onConfirm={leaveList} />
+                  <button className="dd-btn-ghost" onClick={() => setLeaving(false)}>Mejor me quedo</button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <button onClick={confirmGoing} disabled={busy} className="dd-btn dd-btn-main">
             ¡CONFIRMO, VOY! 🍿
@@ -192,7 +364,7 @@ export default function DoomsdayPage() {
         )}
       </section>
 
-      {/* ── Lista ── */}
+      {/* ── Lista pública ── */}
       <section className="dd-card">
         <h2 className="dd-section-title">
           🦸 Reclutados <span className="dd-count-pill">{rsvps.length}</span>
@@ -209,52 +381,193 @@ export default function DoomsdayPage() {
                   <p className="dd-person-name">{r.profileName}</p>
                   {r.username && <p className="dd-person-user">@{String(r.username).replace(/^@/, '')}</p>}
                 </div>
-                {r.seat && <span className="dd-seat-badge">💺 {r.seat}</span>}
-
-                {isAdmin && (
-                  <div className="dd-admin-controls">
-                    <input
-                      className="dd-seat-input"
-                      placeholder="Silla (ej: F7)"
-                      value={seatDrafts[r.uid] ?? r.seat ?? ''}
-                      onChange={e => setSeatDrafts(d => ({ ...d, [r.uid]: e.target.value }))}
-                      maxLength={8}
-                    />
-                    <button className="dd-mini-btn" onClick={() => saveSeat(r.uid)} title="Guardar silla">✓</button>
-                    <button className="dd-mini-btn dd-mini-danger" onClick={() => removePerson(r.uid)} title="Quitar de la lista">✕</button>
-                  </div>
-                )}
+                {r.bought && <span className="dd-tag dd-tag-ok">🎟️ Con boleta</span>}
+                {r.seat && <span className="dd-tag">💺 {r.seat}</span>}
               </div>
             ))}
           </div>
         )}
-
-        {isAdmin && rsvps.length > 0 && (
-          <p className="dd-admin-note">
-            🛡️ Modo admin — puedes asignar sillas y quitar gente de la lista.
-          </p>
-        )}
       </section>
 
-      {/* ── Info preventa ── */}
+      {/* ── Info de la función ── */}
       <section className="dd-card">
-        <h2 className="dd-section-title">🎟️ Datos de la preventa</h2>
+        <h2 className="dd-section-title">🎟️ Datos de la función</h2>
         <ul className="dd-info-list">
-          <li><strong>20 de julio de 2026</strong> — arranca la venta de boletas en EE.UU. (antes del panel en la Comic-Con de San Diego).</li>
-          <li><strong>Latinoamérica</strong> — la fecha de preventa aún no está confirmada; se anunciará cerca del estreno. Aquí coordinamos para caerle el día uno.</li>
-          <li><strong>17 de diciembre de 2026</strong> — estreno en cines de Colombia y Latam (18 dic internacional).</li>
-          <li><strong>Duración:</strong> 2 horas y 45 minutos. Llega con tiempo y con crispetas.</li>
+          <li><strong>Preventa:</strong> según rumores abre <strong>mañana</strong>. Nada oficial todavía — hay que estar pendientes para caerle apenas abra.</li>
+          <li><strong>Nuestra función:</strong> será entre el <strong>16 y el 18 de diciembre, por la noche</strong>. El día exacto se define cuando abra la preventa.</li>
+          <li><strong>El día de la función:</strong> llegar <strong>2 horas antes</strong> al <strong>Centro Comercial Buenavista</strong>.</li>
+          <li><strong>Código de vestir:</strong> gala y túnica verde. Sin excusas.</li>
         </ul>
       </section>
 
+      {/* ══════════ ZONA ADMIN (dorada) ══════════ */}
+      {isAdmin && (
+        <>
+          <div className="dd-admin-divider">
+            <span className="dd-admin-divider-line" />
+            <span className="dd-admin-divider-text">🛡️ Zona de administración — solo tú ves esto</span>
+            <span className="dd-admin-divider-line" />
+          </div>
+
+          {/* Resumen */}
+          <section className="dd-card dd-gold">
+            <h2 className="dd-gold-title">📊 Resumen</h2>
+            <div className="dd-stats">
+              <div className="dd-stat">
+                <span className="dd-stat-num">{rsvps.length}</span>
+                <span className="dd-stat-label">confirmados</span>
+              </div>
+              <div className="dd-stat">
+                <span className="dd-stat-num">{boughtCount}</span>
+                <span className="dd-stat-label">con boleta</span>
+              </div>
+              <div className="dd-stat">
+                <span className="dd-stat-num">{totalTickets}</span>
+                <span className="dd-stat-label">boletas totales</span>
+              </div>
+              <div className="dd-stat">
+                <span className="dd-stat-num">{access.length}</span>
+                <span className="dd-stat-label">con acceso</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Accesos */}
+          <section className="dd-card dd-gold">
+            <h2 className="dd-gold-title">🔑 Dar acceso a la página</h2>
+            <p className="dd-gold-sub">
+              Busca por nombre, usuario o correo. Al darle acceso, a esa persona le aparece
+              el botón de Avengers en el menú y puede entrar aquí.
+            </p>
+
+            <input
+              className="dd-search"
+              placeholder="Buscar por nombre, @usuario o correo…"
+              value={term}
+              onFocus={loadUsers}
+              onChange={e => setTerm(e.target.value)}
+            />
+            {loadingUsers && <p className="dd-muted" style={{ marginTop: 10 }}>Cargando usuarios…</p>}
+
+            {t && results.length === 0 && !loadingUsers && (
+              <p className="dd-muted" style={{ marginTop: 10 }}>Sin resultados para “{term}”.</p>
+            )}
+
+            {results.length > 0 && (
+              <div className="dd-list" style={{ marginTop: 12 }}>
+                {results.map(u => {
+                  const already = access.some(a => a.uid === u.uid) || u.usernameSlug === DOOMSDAY_ADMIN_SLUG
+                  return (
+                    <div key={u.uid} className="dd-person dd-person-gold">
+                      <Avatar photoURL={u.photoURL} name={u.profileName} size={36} />
+                      <div className="dd-person-info">
+                        <p className="dd-person-name">{u.profileName || u.usernameSlug}</p>
+                        <p className="dd-person-user">
+                          {u.username ? `@${String(u.username).replace(/^@/, '')}` : ''}
+                          {u.email ? ` · ${u.email}` : ''}
+                        </p>
+                      </div>
+                      {already ? (
+                        <span className="dd-tag dd-tag-gold">Ya tiene acceso</span>
+                      ) : (
+                        <button className="dd-gold-btn" onClick={() => grantAccess(u)}>Dar acceso</button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <h3 className="dd-gold-subtitle">Personas con acceso ({access.length})</h3>
+            {access.length === 0 ? (
+              <p className="dd-muted">Todavía nadie más tiene acceso.</p>
+            ) : (
+              <div className="dd-list">
+                {access.map(a => (
+                  <div key={a.uid} className="dd-person dd-person-gold">
+                    <Avatar photoURL={a.photoURL} name={a.profileName} size={36} />
+                    <div className="dd-person-info">
+                      <p className="dd-person-name">{a.profileName}</p>
+                      <p className="dd-person-user">
+                        {a.username ? `@${String(a.username).replace(/^@/, '')}` : ''}
+                        {a.email ? ` · ${a.email}` : ''}
+                      </p>
+                    </div>
+                    <button className="dd-mini-btn dd-mini-danger" onClick={() => revokeAccess(a.uid)} title="Quitar acceso">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Control de boletas */}
+          <section className="dd-card dd-gold">
+            <h2 className="dd-gold-title">🎫 Control de boletas y sillas</h2>
+            <p className="dd-gold-sub">
+              Marca quién ya compró. Al marcar <strong>Comprada</strong> esa persona queda bloqueada
+              y no puede salirse de la lista.
+            </p>
+
+            {rsvps.length === 0 ? (
+              <p className="dd-muted">Nadie en la lista todavía.</p>
+            ) : (
+              <div className="dd-list">
+                {rsvps.map(r => {
+                  const d = draftOf(r)
+                  const dirty = !!drafts[r.uid]
+                  return (
+                    <div key={r.uid} className="dd-ticket-row">
+                      <div className="dd-ticket-head">
+                        <Avatar photoURL={r.photoURL} name={r.profileName} size={36} />
+                        <div className="dd-person-info">
+                          <p className="dd-person-name">{r.profileName}</p>
+                          <p className="dd-person-user">
+                            {r.username ? `@${String(r.username).replace(/^@/, '')}` : ''}
+                            {r.email ? ` · ${r.email}` : ''}
+                          </p>
+                        </div>
+                        <button
+                          className={`dd-bought-toggle ${r.bought ? 'on' : ''}`}
+                          onClick={() => toggleBought(r)}
+                        >
+                          {r.bought ? '🎟️ Comprada' : 'Sin comprar'}
+                        </button>
+                        <button className="dd-mini-btn dd-mini-danger" onClick={() => removePerson(r.uid)} title="Quitar de la lista">✕</button>
+                      </div>
+
+                      <div className="dd-ticket-fields">
+                        <label className="dd-field">
+                          <span>Boletas</span>
+                          <input type="number" min="0" max="20" value={d.tickets}
+                            onChange={e => setDraft(r.uid, { tickets: e.target.value })} />
+                        </label>
+                        <label className="dd-field">
+                          <span>Silla</span>
+                          <input placeholder="F7" maxLength={8} value={d.seat}
+                            onChange={e => setDraft(r.uid, { seat: e.target.value })} />
+                        </label>
+                        <label className="dd-field dd-field-wide">
+                          <span>Le compró a (opcional)</span>
+                          <input placeholder="Nombre de a quién le compró" value={d.boughtFor}
+                            onChange={e => setDraft(r.uid, { boughtFor: e.target.value })} />
+                        </label>
+                        <button className="dd-gold-btn" disabled={!dirty} onClick={() => saveRow(r)}>
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
       <style>{`
         .dd-page {
-          min-height: 100vh;
-          max-width: 860px;
-          margin: 0 auto;
-          padding: 100px 20px 60px;
-          position: relative;
-          z-index: 1;
+          min-height: 100vh; max-width: 860px; margin: 0 auto;
+          padding: 100px 20px 60px; position: relative; z-index: 1;
         }
         .dd-glow {
           position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -283,10 +596,7 @@ export default function DoomsdayPage() {
           color: var(--text); margin: 0 0 12px; line-height: 1.05;
         }
         .dd-title-sep { color: #22c55e; }
-        .dd-title-green {
-          color: #22c55e;
-          text-shadow: 0 0 34px rgba(34,197,94,.55);
-        }
+        .dd-title-green { color: #22c55e; text-shadow: 0 0 34px rgba(34,197,94,.55); }
         .dd-meta { color: var(--sub); font-size: 14px; line-height: 1.8; }
         .dd-meta strong { color: #86efac; }
         .dd-countdown { display: flex; justify-content: center; gap: 12px; margin-top: 26px; }
@@ -303,11 +613,11 @@ export default function DoomsdayPage() {
           font-variant-numeric: tabular-nums;
         }
         .dd-count-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+
         .dd-card {
           background: rgba(13, 20, 15, .88);
           border: 1px solid rgba(34,197,94,.18);
-          border-radius: 18px; padding: 28px;
-          margin-bottom: 22px;
+          border-radius: 18px; padding: 28px; margin-bottom: 22px;
           box-shadow: 0 0 40px rgba(34,197,94,.05);
         }
         .dd-section-title {
@@ -323,6 +633,28 @@ export default function DoomsdayPage() {
         .dd-section-sub { color: var(--sub); font-size: 14px; line-height: 1.7; margin-bottom: 20px; }
         .dd-section-sub strong { color: #86efac; }
         .dd-muted { color: var(--muted); font-size: 14px; }
+
+        /* Sinopsis */
+        .dd-synopsis {
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 30px; font-weight: 700; letter-spacing: .06em;
+          color: #4ade80; margin: 6px 0 22px;
+          text-shadow: 0 0 26px rgba(34,197,94,.35);
+        }
+        .dd-dress {
+          display: flex; align-items: center; gap: 14px;
+          background: rgba(34,197,94,.06);
+          border: 1px solid rgba(34,197,94,.25);
+          border-radius: 12px; padding: 14px 18px;
+        }
+        .dd-dress-icon { font-size: 24px; }
+        .dd-dress-label {
+          font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+          color: var(--muted); margin: 0 0 2px;
+        }
+        .dd-dress-value { font-size: 16px; font-weight: 600; color: #86efac; margin: 0; }
+
+        /* Botones */
         .dd-btn {
           display: inline-flex; align-items: center; justify-content: center; gap: 8px;
           border: none; border-radius: 12px; cursor: pointer;
@@ -332,65 +664,87 @@ export default function DoomsdayPage() {
         }
         .dd-btn-main {
           background: linear-gradient(135deg, #16a34a, #15803d);
-          color: #fff; font-size: 17px;
-          box-shadow: 0 0 30px rgba(34,197,94,.35);
+          color: #fff; font-size: 17px; box-shadow: 0 0 30px rgba(34,197,94,.35);
         }
         .dd-btn-main:hover { box-shadow: 0 0 46px rgba(34,197,94,.6); transform: translateY(-1px); }
         .dd-btn-main:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-        .dd-btn-outline {
-          background: transparent; border: 1px solid rgba(34,197,94,.45); color: #4ade80;
-        }
-        .dd-btn-outline:hover { background: rgba(34,197,94,.1); }
-        .dd-btn-danger {
-          background: transparent; border: 1px solid rgba(239,68,68,.35); color: #f87171;
-          font-size: 13px; padding: 9px 18px;
-        }
-        .dd-btn-danger:hover { background: rgba(239,68,68,.1); }
-        .dd-confirmed { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-        .dd-confirmed-check {
+
+        /* Fila de estado — ambas pastillas del mismo tamaño */
+        .dd-confirmed { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+        .dd-status-pill {
           display: flex; align-items: center; gap: 10px;
-          color: #86efac; font-size: 15px; font-weight: 600;
+          font-size: 14px; font-weight: 600; line-height: 1;
+          padding: 14px 20px; border-radius: 12px;
           background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3);
-          border-radius: 12px; padding: 12px 20px;
+          color: #86efac; margin: 0;
         }
+        .dd-status-danger {
+          background: transparent; border-color: rgba(239,68,68,.35); color: #f87171;
+          cursor: pointer; transition: background .2s;
+        }
+        .dd-status-danger:hover { background: rgba(239,68,68,.1); }
+        .dd-status-locked { border-color: rgba(250,204,21,.35); color: #fde68a; background: rgba(250,204,21,.06); }
+
+        /* Mantener pulsado para salir */
+        .dd-leave-box {
+          margin-top: 16px; padding: 18px;
+          background: rgba(239,68,68,.05);
+          border: 1px solid rgba(239,68,68,.25); border-radius: 12px;
+        }
+        .dd-leave-text { font-size: 13px; color: var(--sub); margin: 0 0 14px; line-height: 1.6; }
+        .dd-leave-text strong { color: #f87171; }
+        .dd-leave-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .dd-hold-btn {
+          position: relative; overflow: hidden;
+          padding: 12px 26px; border-radius: 10px;
+          border: 1px solid rgba(239,68,68,.5); background: rgba(239,68,68,.08);
+          color: #fca5a5; font-size: 13px; font-weight: 700; cursor: pointer;
+          user-select: none; -webkit-user-select: none; touch-action: none;
+          transition: border-color .2s;
+        }
+        .dd-hold-btn:hover { border-color: rgba(239,68,68,.8); }
+        .dd-hold-btn:disabled { opacity: .6; cursor: default; }
+        .dd-hold-fill {
+          position: absolute; left: 0; top: 0; bottom: 0;
+          background: rgba(239,68,68,.35); transition: width .05s linear;
+        }
+        .dd-hold-label { position: relative; z-index: 1; }
+        .dd-btn-ghost {
+          background: none; border: none; color: var(--sub);
+          font-size: 13px; cursor: pointer; text-decoration: underline;
+        }
+        .dd-btn-ghost:hover { color: var(--text); }
+
+        /* Lista de personas */
         .dd-list { display: flex; flex-direction: column; gap: 10px; }
         .dd-person {
           display: flex; align-items: center; gap: 14px;
           background: rgba(9, 14, 10, .7);
           border: 1px solid rgba(34,197,94,.12);
-          border-radius: 12px; padding: 12px 16px;
-          transition: border-color .2s;
+          border-radius: 12px; padding: 12px 16px; transition: border-color .2s;
         }
         .dd-person:hover { border-color: rgba(34,197,94,.35); }
         .dd-person-info { flex: 1; min-width: 0; }
         .dd-person-name { font-size: 14px; font-weight: 600; color: var(--text); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dd-person-user { font-size: 12px; color: var(--muted); margin: 0; }
-        .dd-seat-badge {
+        .dd-person-user { font-size: 12px; color: var(--muted); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dd-tag {
           font-size: 12px; font-weight: 700; color: #86efac;
           background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3);
           border-radius: 8px; padding: 4px 10px; white-space: nowrap;
         }
-        .dd-admin-controls { display: flex; align-items: center; gap: 6px; }
-        .dd-seat-input {
-          width: 90px; background: var(--bg); border: 1px solid var(--border);
-          border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--text);
-          outline: none;
-        }
-        .dd-seat-input:focus { border-color: #22c55e; }
+        .dd-tag-ok { color: #fde68a; background: rgba(250,204,21,.1); border-color: rgba(250,204,21,.3); }
         .dd-mini-btn {
-          width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(34,197,94,.35);
+          width: 28px; height: 28px; flex-shrink: 0;
+          border-radius: 8px; border: 1px solid rgba(34,197,94,.35);
           background: transparent; color: #4ade80; font-size: 13px; cursor: pointer;
           transition: background .15s;
         }
         .dd-mini-btn:hover { background: rgba(34,197,94,.15); }
         .dd-mini-danger { border-color: rgba(239,68,68,.35); color: #f87171; }
         .dd-mini-danger:hover { background: rgba(239,68,68,.12); }
-        .dd-admin-note { margin-top: 16px; font-size: 12px; color: var(--muted); }
+
         .dd-info-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 12px; }
-        .dd-info-list li {
-          font-size: 14px; color: var(--sub); line-height: 1.7;
-          padding-left: 18px; position: relative;
-        }
+        .dd-info-list li { font-size: 14px; color: var(--sub); line-height: 1.7; padding-left: 18px; position: relative; }
         .dd-info-list li::before {
           content: ''; position: absolute; left: 0; top: 9px;
           width: 7px; height: 7px; border-radius: 2px;
@@ -398,10 +752,115 @@ export default function DoomsdayPage() {
           transform: rotate(45deg);
         }
         .dd-info-list strong { color: #86efac; }
+
+        /* ══ Zona admin — dorada ══ */
+        .dd-admin-divider {
+          display: flex; align-items: center; gap: 14px;
+          margin: 44px 0 22px;
+        }
+        .dd-admin-divider-line {
+          flex: 1; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(250,204,21,.4), transparent);
+        }
+        .dd-admin-divider-text {
+          font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+          color: #fbbf24; white-space: nowrap;
+        }
+        .dd-gold {
+          background: rgba(26, 20, 8, .9);
+          border-color: rgba(250,204,21,.28);
+          box-shadow: 0 0 40px rgba(250,204,21,.06);
+        }
+        .dd-gold-title {
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 21px; font-weight: 700; color: #fbbf24;
+          margin: 0 0 8px; display: flex; align-items: center; gap: 10px;
+        }
+        .dd-gold-subtitle {
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 16px; font-weight: 700; color: #fcd34d;
+          margin: 26px 0 12px;
+        }
+        .dd-gold-sub { color: #d6c8a0; font-size: 13px; line-height: 1.7; margin-bottom: 18px; }
+        .dd-gold-sub strong { color: #fbbf24; }
+        .dd-gold .dd-muted { color: #9c8f6d; }
+        .dd-gold .dd-person, .dd-person-gold {
+          background: rgba(18, 14, 5, .8);
+          border-color: rgba(250,204,21,.15);
+        }
+        .dd-gold .dd-person:hover { border-color: rgba(250,204,21,.4); }
+        .dd-gold .dd-mini-btn { border-color: rgba(250,204,21,.35); color: #fbbf24; }
+        .dd-gold .dd-mini-btn:hover { background: rgba(250,204,21,.15); }
+        .dd-gold .dd-mini-danger { border-color: rgba(239,68,68,.35); color: #f87171; }
+        .dd-tag-gold { color: #fde68a; background: rgba(250,204,21,.1); border-color: rgba(250,204,21,.3); }
+        .dd-gold-btn {
+          flex-shrink: 0;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: #1a1405; border: none; border-radius: 9px;
+          padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: filter .2s, opacity .2s;
+        }
+        .dd-gold-btn:hover { filter: brightness(1.12); }
+        .dd-gold-btn:disabled { opacity: .35; cursor: not-allowed; filter: none; }
+        .dd-search {
+          width: 100%; background: rgba(10, 8, 3, .8);
+          border: 1px solid rgba(250,204,21,.28); border-radius: 10px;
+          padding: 12px 16px; font-size: 14px; color: var(--text); outline: none;
+          transition: border-color .2s;
+        }
+        .dd-search::placeholder { color: #8a7d5e; }
+        .dd-search:focus { border-color: #fbbf24; }
+
+        .dd-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+        .dd-stat {
+          flex: 1; min-width: 110px;
+          background: rgba(18, 14, 5, .8);
+          border: 1px solid rgba(250,204,21,.18);
+          border-radius: 12px; padding: 16px;
+          display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .dd-stat-num {
+          font-family: 'Rajdhani', sans-serif; font-size: 30px; font-weight: 700;
+          color: #fbbf24; line-height: 1;
+        }
+        .dd-stat-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9c8f6d; }
+
+        .dd-ticket-row {
+          background: rgba(18, 14, 5, .8);
+          border: 1px solid rgba(250,204,21,.15);
+          border-radius: 12px; padding: 14px 16px;
+          display: flex; flex-direction: column; gap: 14px;
+        }
+        .dd-ticket-head { display: flex; align-items: center; gap: 14px; }
+        .dd-bought-toggle {
+          flex-shrink: 0;
+          background: transparent; border: 1px solid rgba(250,204,21,.3);
+          color: #9c8f6d; border-radius: 9px; padding: 7px 14px;
+          font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s;
+        }
+        .dd-bought-toggle:hover { border-color: #fbbf24; color: #fbbf24; }
+        .dd-bought-toggle.on {
+          background: rgba(250,204,21,.15); border-color: #fbbf24; color: #fde68a;
+        }
+        .dd-ticket-fields { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .dd-field { display: flex; flex-direction: column; gap: 5px; }
+        .dd-field span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #9c8f6d; }
+        .dd-field input {
+          width: 92px; background: rgba(10, 8, 3, .8);
+          border: 1px solid rgba(250,204,21,.22); border-radius: 8px;
+          padding: 8px 10px; font-size: 13px; color: var(--text); outline: none;
+        }
+        .dd-field input:focus { border-color: #fbbf24; }
+        .dd-field-wide { flex: 1; min-width: 180px; }
+        .dd-field-wide input { width: 100%; }
+
         @media (max-width: 560px) {
           .dd-person { flex-wrap: wrap; }
-          .dd-admin-controls { width: 100%; justify-content: flex-end; }
           .dd-count-box { width: 64px; }
+          .dd-confirmed { flex-direction: column; align-items: stretch; }
+          .dd-status-pill { justify-content: center; }
+          .dd-ticket-head { flex-wrap: wrap; }
+          .dd-admin-divider-text { font-size: 10px; white-space: normal; text-align: center; }
         }
       `}</style>
     </main>
