@@ -637,6 +637,11 @@ export default function DoomsdayPage() {
         }
         .dd-count-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
 
+        /* Las tarjetas van POR ENCIMA de las chispas: el canvas está posicionado
+           y ellas no, así que sin esto se pintaban por debajo y las chispas
+           pasaban por delante del texto en vez de verse atenuadas detrás. */
+        .dd-card, .dd-hero, .dd-admin-divider { position: relative; z-index: 1; }
+
         .dd-card {
           background: rgba(13, 20, 15, .88);
           border: 1px solid rgba(34,197,94,.18);

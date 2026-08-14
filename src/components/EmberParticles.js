@@ -37,10 +37,10 @@ export default function EmberParticles({ densidad = 0.00008 }) {
         // toda la pantalla para no ver la primera oleada subir en bloque.
         y: alturaInicialAleatoria ? Math.random() * alto : alto + Math.random() * 40,
         r: 0.7 + Math.random() * 1.9,
-        vy: 12 + Math.random() * 34,          // píxeles por segundo, hacia arriba
+        vy: 16 + Math.random() * 42,          // píxeles por segundo, hacia arriba
         deriva: (Math.random() - 0.5) * 18,   // vaivén horizontal
         fase: Math.random() * Math.PI * 2,
-        vidaMax: 4 + Math.random() * 5,       // segundos
+        vidaMax: 5 + Math.random() * 5.5,     // segundos: cuanto más vive, más sube
         vida: 0,
         color: COLORES[(Math.random() * COLORES.length) | 0],
         brillo: 0.35 + Math.random() * 0.5,
@@ -77,9 +77,10 @@ export default function EmberParticles({ densidad = 0.00008 }) {
           continue
         }
 
-        // Aparece y se apaga suavemente en los extremos de su vida.
+        // Aparece y se apaga suavemente en los extremos de su vida. El apagado
+        // arranca tarde (0.72) para que la chispa suba más antes de irse.
         const t = c.vida / c.vidaMax
-        const desvanecido = t < 0.15 ? t / 0.15 : t > 0.6 ? (1 - t) / 0.4 : 1
+        const desvanecido = t < 0.12 ? t / 0.12 : t > 0.72 ? (1 - t) / 0.28 : 1
         const alfa = Math.max(0, Math.min(1, desvanecido)) * c.brillo
 
         ctx.globalAlpha = alfa
