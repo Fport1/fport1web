@@ -9,6 +9,7 @@ import {
   setDoc, deleteDoc, updateDoc, serverTimestamp, limit, increment,
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
+import EmberParticles from '@/components/EmberParticles'
 import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
 import { notificar } from '@/lib/notify'
 
@@ -298,6 +299,7 @@ export default function DoomsdayPage() {
   return (
     <main className="dd-page">
       <div className="dd-glow" />
+      <EmberParticles />
 
       {/* ── Hero ── */}
       <section className="dd-hero">
