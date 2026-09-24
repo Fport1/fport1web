@@ -29,6 +29,40 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // Ayudar a un amigo (launcher) — señalización WebRTC entre dos launchers.
+    // El documento solo sirve para que se encuentren: el anfitrión lo crea con
+    // su oferta, el ayudante (que conoce el código) responde UNA vez, y el
+    // anfitrión lo borra al conectar, al cancelar o al cerrar el launcher.
+    // No se puede listar la colección: si no, se podrían enumerar los códigos.
+    match /assist/{code} {
+      allow get:  if request.auth != null;
+      allow list: if false;
+
+      allow create: if request.auth != null
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.keys().hasOnly(['hostUid','hostName','instanceName','minecraft','loader','offer','status','createdAt','expiresAt','expireAt'])
+        && request.resource.data.offer is string
+        && request.resource.data.offer.size() < 50000;
+
+      allow update: if request.auth != null && (
+        // El anfitrión manda sobre su propio documento.
+        resource.data.hostUid == request.auth.uid
+        // El ayudante solo entra una vez: waiting -> requested, y nada más.
+        || (
+          resource.data.status == 'waiting'
+          && request.resource.data.status == 'requested'
+          && request.resource.data.helperUid == request.auth.uid
+          && request.auth.uid != resource.data.hostUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer','helperUid','helperName','status'])
+          && request.resource.data.answer is string
+          && request.resource.data.answer.size() < 50000
+        )
+      );
+
+      allow delete: if request.auth != null && resource.data.hostUid == request.auth.uid;
+    }
+
     match /friendRequests/{reqId} {
       allow create: if request.auth != null && request.resource.data.fromUid == request.auth.uid;
       // Split read rules so Firestore can verify each from query constraints
