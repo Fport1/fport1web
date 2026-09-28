@@ -2,10 +2,14 @@ rules_version = '2';
 
 // Reglas de Firebase Storage para Fport1.
 //
-// Las reglas de Storage NO pueden leer Firestore, así que aquí no se puede
-// comprobar quién participa en una conversación. Por eso los adjuntos del chat
-// tienen la LECTURA CERRADA: para ver uno hay que pedir un enlace temporal a
-// /api/chat-media, que sí consulta Firestore y comprueba la pertenencia.
+// Los adjuntos del chat tienen la LECTURA CERRADA: para ver uno hay que pedir
+// un enlace temporal a /api/chat-media, que comprueba que quien lo pide
+// participa en esa conversación. Se hace así, y no con reglas entre servicios,
+// porque habría que consultar Firestore en CADA lectura de archivo: sale caro
+// y lento cuando un chat carga muchas imágenes de golpe.
+//
+// Donde sí se usa firestore.get() es en el catálogo: es una escritura puntual
+// del administrador, no un camino caliente.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -71,6 +75,27 @@ service firebase.storage {
       allow write: if request.auth != null
                    && request.auth.uid == uid
                    && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Archivos del catálogo de Fport1 (instaladores, imágenes de los proyectos).
+    // Lectura pública porque son descargas abiertas; escribir y borrar, solo
+    // @fport1.
+    //
+    // El uid va fijo en vez de consultar Firestore desde aquí (firestore.get
+    // sobre users/{uid}, que es la otra forma de hacerlo): así la regla no
+    // depende de las reglas entre servicios ni añade una lectura de Firestore
+    // por cada subida.
+    //
+    // Ninguna de las dos variantes se ha podido probar en ejecución todavía:
+    // el bucket rechaza CUALQUIER subida con storage/quota-exceeded mientras el
+    // proyecto siga en el plan gratuito, sea cual sea la ruta o la regla.
+    //
+    // Si cambia la cuenta administradora hay que actualizar este uid.
+    match /fport1/projects/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if request.auth != null
+        && request.auth.uid == 'KSLnFnpX1ibA1RgJ1aifB2VWOyi1'
+        && (request.resource == null || request.resource.size < 500 * 1024 * 1024);
     }
 
     // Todo lo demás: bloqueado.

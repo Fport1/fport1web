@@ -195,5 +195,31 @@ service cloud.firestore {
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
       }
     }
+
+    // Catálogo de proyectos de Fport1 (modpacks, descargas…).
+    // Lo publica y administra solo @fport1; el resto del mundo únicamente ve lo
+    // que está publicado. La única escritura ajena permitida es sumar 1 al
+    // contador de descargas, y nada más de ese documento.
+    match /fport1_projects/{pid} {
+      function esFport1() {
+        return request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
+      }
+      function soloSumaDescarga() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloads'])
+          && request.resource.data.downloads == resource.data.downloads + 1;
+      }
+
+      allow read: if resource.data.published == true || esFport1();
+      allow create, delete: if esFport1();
+      allow update: if esFport1() || soloSumaDescarga();
+
+      match /versions/{vid} {
+        allow read: if get(/databases/$(database)/documents/fport1_projects/$(pid)).data.published == true
+                    || esFport1();
+        allow create, delete: if esFport1();
+        allow update: if esFport1() || soloSumaDescarga();
+      }
+    }
   }
 }

@@ -880,8 +880,14 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
         if (!newText || !canEdit) { setEditing(false); return; }
         if (newText === textToCopy) { setEditing(false); return; }
         try {
+            // El mensaje se guarda SOLO como textCipher (así lo crea sendMessage
+            // y así lo lee la lista, que descifra ese campo). Antes aquí se
+            // escribía `text`, un campo que nadie lee: la edición se guardaba
+            // pero no se veía. Tampoco dejamos copia en claro, para no filtrar
+            // el contenido cuando el cifrado deje de ser de paso.
+            const textCipher = await encryptMessage(newText, convoId, userUid);
             await updateDoc(doc(db, "conversations", convoId, "messages", msgId), {
-                text: newText,
+                textCipher,
                 editedAt: serverTimestamp(),
             });
         } catch (e) {
