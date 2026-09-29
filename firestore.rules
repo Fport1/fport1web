@@ -285,12 +285,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Lecciones que aprende la IA al arreglar algo (texto ya saneado por el launcher).
+    // Lecciones que aprende la IA al arreglar o construir algo (texto ya saneado por el launcher):
+    // crash, config, compatibilidad, construccion, mundo, rendimiento o mecanica.
     // Se crean con worked = failed = 0 y después solo se puede sumar 1 a uno de los dos.
     match /ai_lessons/{id} {
       allow read: if true;
       allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
-        && request.resource.data.keys().hasOnly(['title', 'symptom', 'cause', 'fix', 'mods', 'mc', 'loader', 'sig', 'v', 'worked', 'failed', 'created'])
+        && request.resource.data.keys().hasOnly(['kind', 'title', 'symptom', 'cause', 'fix', 'mods', 'mc', 'loader', 'sig', 'v', 'worked', 'failed', 'created'])
+        && (!('kind' in request.resource.data) || request.resource.data.kind in ['crash', 'config', 'compatibilidad', 'construccion', 'mundo', 'rendimiento', 'mecanica'])
         && request.resource.data.keys().hasAll(['title', 'symptom', 'cause', 'fix', 'mc', 'loader', 'worked', 'failed'])
         && textoCorto('title', 130) && textoCorto('symptom', 610) && textoCorto('cause', 610) && textoCorto('fix', 610)
         && textoCorto('mc', 24) && textoCorto('loader', 16) && textoCorto('sig', 24) && textoCorto('v', 20)
@@ -311,6 +313,31 @@ service cloud.firestore {
         && (!('mods' in request.resource.data) || (request.resource.data.mods is list && request.resource.data.mods.size() <= 10))
         && request.resource.data.lastSeen == request.time
         && subeHasta('count', 1);
+      allow delete: if esFport1Launcher();
+    }
+
+    // Resumen anónimo de cada partida: mods, cómo es el mundo (sin nombre, semilla
+    // ni coordenadas), qué pasó y el rendimiento. La IA lo usa para saber cómo se
+    // comporta el juego con cada mod. Solo se crea; nadie lo cambia después.
+    match /play_sessions/{id} {
+      allow read: if true;
+      allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
+        && request.resource.data.keys().hasOnly(['mc', 'loader', 'v', 'mods', 'modCount', 'minutes', 'crashed', 'sig',
+             'loadSeconds', 'lagWarnings', 'errors', 'warnings', 'noisy', 'world', 'at'])
+        && textoCorto('mc', 24) && textoCorto('loader', 16) && textoCorto('v', 20) && textoCorto('sig', 24)
+        && request.resource.data.mods is list && request.resource.data.mods.size() <= 150
+        && request.resource.data.modCount is int && request.resource.data.modCount <= 1000
+        && request.resource.data.minutes is int && request.resource.data.minutes >= 0 && request.resource.data.minutes <= 1440
+        && request.resource.data.crashed is bool
+        && request.resource.data.loadSeconds is int && request.resource.data.lagWarnings is int
+        && request.resource.data.errors is int && request.resource.data.warnings is int
+        && request.resource.data.noisy is map && request.resource.data.noisy.size() <= 12
+        && (!('world' in request.resource.data)
+            || (request.resource.data.world is map
+                && request.resource.data.world.keys().hasOnly(['mode', 'difficulty', 'hardcore', 'cheats', 'dims', 'gen',
+                     'datapacks', 'rules', 'minutes', 'killed', 'killedBy', 'deaths', 'mined'])))
+        && request.resource.data.at == request.time;
+      allow update: if false;
       allow delete: if esFport1Launcher();
     }
   }
