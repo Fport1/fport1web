@@ -221,5 +221,97 @@ service cloud.firestore {
         allow update: if esFport1() || soloSumaDescarga();
       }
     }
+
+    // ── Estadísticas anónimas y aprendizaje de la IA del launcher ────────────
+    // Las escribe el launcher SIN iniciar sesión (muchos no tienen cuenta de
+    // fport1social), así que cada regla limita qué campos existen, su tamaño y
+    // cuánto puede subir cada contador en una escritura. Nadie puede borrar ni
+    // bajar números. Las estadísticas solo las lee @fport1; las lecciones y las
+    // huellas de crash son públicas porque las usa la IA de cualquier launcher.
+    function esFport1Launcher() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
+    }
+    // Valor anterior de un contador (0 si el documento o el campo no existían)
+    function antes(campo) {
+      return resource == null ? 0 : resource.data.get(campo, 0);
+    }
+    // El contador no existe todavía, o es entero y sube entre 0 y max
+    function subeHasta(campo, max) {
+      return !(campo in request.resource.data)
+        || (request.resource.data[campo] is int
+            && request.resource.data[campo] >= antes(campo)
+            && request.resource.data[campo] <= antes(campo) + max);
+    }
+    function textoCorto(campo, max) {
+      return !(campo in request.resource.data)
+        || (request.resource.data[campo] is string && request.resource.data[campo].size() <= max);
+    }
+
+    // Una ficha por instalación (id aleatorio, no sale de ningún dato personal)
+    match /launcher_installs/{id} {
+      allow read: if esFport1Launcher();
+      allow create, update: if id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        && request.resource.data.keys().hasOnly(['firstSeen', 'firstDay', 'lastSeen', 'v', 'os', 'arch', 'osv',
+             'lang', 'sysLang', 'instances', 'loaders', 'mc', 'social', 'premium', 'launches', 'days', 'sessions',
+             'playMinutes', 'crashes', 'aiActions', 'aiLessonsShared', 'modInstalls'])
+        // firstSeen se fija una vez y ya no cambia
+        && (resource == null || !('firstSeen' in resource.data)
+            || request.resource.data.firstSeen == resource.data.firstSeen)
+        && request.resource.data.lastSeen == request.time
+        && textoCorto('v', 20) && textoCorto('os', 12) && textoCorto('arch', 12) && textoCorto('osv', 12)
+        && textoCorto('lang', 5) && textoCorto('sysLang', 5) && textoCorto('firstDay', 10)
+        && (!('loaders' in request.resource.data) || (request.resource.data.loaders is map && request.resource.data.loaders.size() <= 10))
+        && (!('mc' in request.resource.data) || (request.resource.data.mc is map && request.resource.data.mc.size() <= 8))
+        && (!('instances' in request.resource.data) || (request.resource.data.instances is int && request.resource.data.instances <= 10000))
+        && (!('social' in request.resource.data) || request.resource.data.social is bool)
+        && (!('premium' in request.resource.data) || request.resource.data.premium is bool)
+        && subeHasta('launches', 200) && subeHasta('days', 1) && subeHasta('sessions', 200)
+        && subeHasta('playMinutes', 20000) && subeHasta('crashes', 200) && subeHasta('aiActions', 2000)
+        && subeHasta('aiLessonsShared', 200) && subeHasta('modInstalls', 2000);
+      allow delete: if false;
+    }
+
+    // Totales de cada día (AAAA-MM-DD)
+    match /launcher_days/{day} {
+      allow read: if esFport1Launcher();
+      allow create, update: if day.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$')
+        && request.resource.data.keys().hasOnly(['active', 'new', 'socialActive', 'launches', 'sessions',
+             'playMinutes', 'crashes', 'aiActions', 'aiLessonsShared', 'modInstalls'])
+        && subeHasta('active', 1) && subeHasta('new', 1) && subeHasta('socialActive', 1)
+        && subeHasta('launches', 200) && subeHasta('sessions', 200) && subeHasta('playMinutes', 20000)
+        && subeHasta('crashes', 200) && subeHasta('aiActions', 2000) && subeHasta('aiLessonsShared', 200)
+        && subeHasta('modInstalls', 2000);
+      allow delete: if false;
+    }
+
+    // Lecciones que aprende la IA al arreglar algo (texto ya saneado por el launcher).
+    // Se crean con worked = failed = 0 y después solo se puede sumar 1 a uno de los dos.
+    match /ai_lessons/{id} {
+      allow read: if true;
+      allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
+        && request.resource.data.keys().hasOnly(['title', 'symptom', 'cause', 'fix', 'mods', 'mc', 'loader', 'sig', 'v', 'worked', 'failed', 'created'])
+        && request.resource.data.keys().hasAll(['title', 'symptom', 'cause', 'fix', 'mc', 'loader', 'worked', 'failed'])
+        && textoCorto('title', 130) && textoCorto('symptom', 610) && textoCorto('cause', 610) && textoCorto('fix', 610)
+        && textoCorto('mc', 24) && textoCorto('loader', 16) && textoCorto('sig', 24) && textoCorto('v', 20)
+        && (!('mods' in request.resource.data) || (request.resource.data.mods is list && request.resource.data.mods.size() <= 10))
+        && request.resource.data.worked == 0 && request.resource.data.failed == 0
+        && request.resource.data.created == request.time;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['worked', 'failed'])
+        && subeHasta('worked', 1) && subeHasta('failed', 1);
+      allow delete: if esFport1Launcher();
+    }
+
+    // Huellas de crash: tipo de error y mods implicados, sin datos del equipo
+    match /crash_signatures/{hash} {
+      allow read: if true;
+      allow create, update: if hash.matches('^[0-9a-f]{24}$')
+        && request.resource.data.keys().hasOnly(['sig', 'mods', 'mc', 'loader', 'count', 'lastSeen'])
+        && textoCorto('sig', 520) && textoCorto('mc', 24) && textoCorto('loader', 16)
+        && (!('mods' in request.resource.data) || (request.resource.data.mods is list && request.resource.data.mods.size() <= 10))
+        && request.resource.data.lastSeen == request.time
+        && subeHasta('count', 1);
+      allow delete: if esFport1Launcher();
+    }
   }
 }
