@@ -81,14 +81,11 @@ service firebase.storage {
     // Lectura pública porque son descargas abiertas; escribir y borrar, solo
     // @fport1.
     //
-    // El uid va fijo en vez de consultar Firestore desde aquí (firestore.get
-    // sobre users/{uid}, que es la otra forma de hacerlo): así la regla no
-    // depende de las reglas entre servicios ni añade una lectura de Firestore
-    // por cada subida.
-    //
-    // Ninguna de las dos variantes se ha podido probar en ejecución todavía:
-    // el bucket rechaza CUALQUIER subida con storage/quota-exceeded mientras el
-    // proyecto siga en el plan gratuito, sea cual sea la ruta o la regla.
+    // El uid va fijo, no por comodidad: la alternativa natural sería mirar el
+    // perfil en Firestore desde aquí (firestore.get sobre users/{uid}). Esa
+    // versión compila, pero se probó en ejecución y el bucket la rechaza con
+    // storage/unauthorized incluso para @fport1, así que las reglas entre
+    // servicios no están disponibles en este proyecto.
     //
     // Si cambia la cuenta administradora hay que actualizar este uid.
     match /fport1/projects/{allPaths=**} {
