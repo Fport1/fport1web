@@ -95,6 +95,15 @@ service firebase.storage {
         && (request.resource == null || request.resource.size < 500 * 1024 * 1024);
     }
 
+    // Series de rendimiento del mod fport1-social (un json.gz por partida).
+    // CERRADO a cal y canto para los clientes: se sube solo con las URLs
+    // firmadas que emite /api/ai-data-upload, y esas no pasan por estas reglas
+    // porque van con la cuenta de servicio. La lectura es de servidor, nunca
+    // pública: aquí hay series largas de telemetría, no descargas del catálogo.
+    match /ai-data/{allPaths=**} {
+      allow read, write: if false;
+    }
+
     // Todo lo demás: bloqueado.
     match /{allPaths=**} {
       allow read, write: if false;
