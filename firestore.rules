@@ -248,6 +248,46 @@ service cloud.firestore {
         || (request.resource.data[campo] is string && request.resource.data[campo].size() <= max);
     }
 
+    // Número dentro de un rango. Recibe el mapa YA resuelto, no su nombre: cada
+    // request.resource.data[mapa][campo] se reevalúa entero, y Firestore corta a
+    // las 1000 evaluaciones por petición. Con la ruta completa se agotaba el
+    // presupuesto y rechazaba documentos válidos.
+    function numeroEntre(m, campo, min, max) {
+      return !(campo in m) || (m[campo] is number && m[campo] >= min && m[campo] <= max);
+    }
+    function esNumero(m, campo) {
+      return !(campo in m) || m[campo] is number;
+    }
+
+    // Resumen de rendimiento de un tramo de juego (antes o después de un cambio).
+    // Puede faltar entero, porque hay veredictos como 'sin datos de antes'. Si
+    // viene, todos sus campos han de ser números: sin eso, uno sin comprobar
+    // aceptaría una cadena enorme en una colección que escribe cualquiera.
+    function resumenValido(campo) {
+      return !(campo in request.resource.data)
+        || (request.resource.data[campo] is map && resumenNumeros(request.resource.data[campo]));
+    }
+    function resumenNumeros(r) {
+      return r.keys().hasOnly(['minutes', 'counted', 'fpsAvg', 'fpsMin', 'msptAvg', 'msptP95',
+               'errorsPerMin', 'warningsPerMin', 'lagPerMin', 'worldLoadMs'])
+        && numeroEntre(r, 'minutes', 0, 1440) && numeroEntre(r, 'counted', 0, 1440)
+        && esNumero(r, 'fpsAvg') && esNumero(r, 'fpsMin')
+        && esNumero(r, 'msptAvg') && esNumero(r, 'msptP95')
+        && esNumero(r, 'errorsPerMin') && esNumero(r, 'warningsPerMin')
+        && esNumero(r, 'lagPerMin') && esNumero(r, 'worldLoadMs');
+    }
+
+    // Medición en vivo del mod, dentro de play_sessions.
+    function liveValido(l) {
+      return l.keys().hasOnly(['fpsAvg', 'fpsP5', 'msptAvg', 'msptP95', 'lagPerMin',
+               'worldLoadMs', 'dimLoadMs', 'memMaxMb', 'topEntities', 'samples'])
+        && numeroEntre(l, 'fpsAvg', 0, 2000) && numeroEntre(l, 'fpsP5', 0, 2000)
+        && numeroEntre(l, 'msptAvg', 0, 60000) && numeroEntre(l, 'msptP95', 0, 60000)
+        && esNumero(l, 'lagPerMin') && esNumero(l, 'samples')
+        && esNumero(l, 'worldLoadMs') && esNumero(l, 'dimLoadMs') && esNumero(l, 'memMaxMb')
+        && (!('topEntities' in l) || (l.topEntities is map && l.topEntities.size() <= 10));
+    }
+
     // Una ficha por instalación (id aleatorio, no sale de ningún dato personal)
     match /launcher_installs/{id} {
       allow read: if esFport1Launcher();
@@ -323,7 +363,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
         && request.resource.data.keys().hasOnly(['mc', 'loader', 'v', 'mods', 'modCount', 'minutes', 'crashed', 'sig',
-             'loadSeconds', 'lagWarnings', 'errors', 'warnings', 'noisy', 'world', 'at'])
+             'loadSeconds', 'lagWarnings', 'errors', 'warnings', 'noisy', 'world', 'live', 'at'])
         && textoCorto('mc', 24) && textoCorto('loader', 16) && textoCorto('v', 20) && textoCorto('sig', 24)
         && request.resource.data.mods is list && request.resource.data.mods.size() <= 150
         && request.resource.data.modCount is int && request.resource.data.modCount <= 1000
@@ -336,6 +376,37 @@ service cloud.firestore {
             || (request.resource.data.world is map
                 && request.resource.data.world.keys().hasOnly(['mode', 'difficulty', 'hardcore', 'cheats', 'dims', 'gen',
                      'datapacks', 'rules', 'minutes', 'killed', 'killedBy', 'deaths', 'mined'])))
+        // Medición en vivo del mod fport1-social. Opcional: las partidas que ya
+        // sube el launcher no la traen y tienen que seguir entrando igual.
+        && (!('live' in request.resource.data)
+            || (request.resource.data.live is map && liveValido(request.resource.data.live)))
+        && request.resource.data.at == request.time;
+      allow update: if false;
+      allow delete: if esFport1Launcher();
+    }
+
+    // Resultado MEDIDO de un cambio que hizo la IA: cómo iba el juego antes y
+    // después, con números del mod, no con lo que la IA cree que pasó.
+    // Solo se crea; nadie lo modifica luego, así que el histórico no se puede
+    // reescribir. `label` no se sube: es texto libre que escribe la IA.
+    match /live_outcomes/{id} {
+      allow read: if true;
+      allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
+        && request.resource.data.keys().hasOnly(['kind', 'target', 'mc', 'loader', 'v', 'modVersion', 'mods',
+             'before', 'after', 'ranAfter', 'verdict', 'lessonId', 'at'])
+        && request.resource.data.kind in ['mod', 'config', 'datapack', 'resourcepack', 'shader', 'world', 'other']
+        && request.resource.data.verdict in ['mejor', 'peor', 'igual', 'sin datos', 'sin datos de antes']
+        // target es obligatorio y con forma de identificador: ni espacios ni
+        // mayúsculas, así no cabe texto libre disfrazado de nombre de mod.
+        && request.resource.data.target is string
+        && request.resource.data.target.size() <= 64
+        && request.resource.data.target.matches('^[a-z0-9_.:/-]*$')
+        && textoCorto('mc', 24) && textoCorto('loader', 16) && textoCorto('v', 20) && textoCorto('modVersion', 24)
+        && textoCorto('lessonId', 40)
+        && (!('mods' in request.resource.data)
+            || (request.resource.data.mods is list && request.resource.data.mods.size() <= 150))
+        && resumenValido('before') && resumenValido('after')
+        && request.resource.data.ranAfter is bool
         && request.resource.data.at == request.time;
       allow update: if false;
       allow delete: if esFport1Launcher();
