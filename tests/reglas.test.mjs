@@ -92,8 +92,10 @@ await t('completo y válido', 'permitido',
   () => setDoc(doc(anon, 'live_outcomes', 'res00001'), outcome()))
 await t('sin before (veredicto sin datos de antes)', 'permitido',
   () => setDoc(doc(anon, 'live_outcomes', 'res00002'), outcome({ verdict: 'sin datos de antes' }, ['before'])))
-await t('cualquiera lo lee', 'permitido',
+await t('un anonimo NO lo lee', 'denegado',
   () => getDoc(doc(anon, 'live_outcomes', 'res00001')))
+await t('@fport1 si lo lee', 'permitido',
+  () => getDoc(doc(admin, 'live_outcomes', 'res00001')))
 await t('con label', 'denegado',
   () => setDoc(doc(anon, 'live_outcomes', 'res00003'), outcome({ label: 'lo que sea' })))
 await t('con player', 'denegado',

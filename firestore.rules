@@ -390,7 +390,12 @@ service cloud.firestore {
     // Solo se crea; nadie lo modifica luego, así que el histórico no se puede
     // reescribir. `label` no se sube: es texto libre que escribe la IA.
     match /live_outcomes/{id} {
-      allow read: if true;
+      // Privada, al reves que ai_lessons y crash_signatures. Aquellas son
+      // publicas porque las lee la IA de cualquier launcher; esta solo se
+      // escribe, y el analisis se hace desde el servidor. Abrirla no aportaria
+      // nada y dejaria que cualquiera se descargue el historico en bucle, que
+      // ahora se factura.
+      allow read: if esFport1Launcher();
       allow create: if id.matches('^[A-Za-z0-9]{8,40}$')
         && request.resource.data.keys().hasOnly(['kind', 'target', 'mc', 'loader', 'v', 'modVersion', 'mods',
              'before', 'after', 'ranAfter', 'verdict', 'lessonId', 'at'])
