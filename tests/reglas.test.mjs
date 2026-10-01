@@ -14,7 +14,8 @@ const env = await initializeTestEnvironment({
   storage: { rules: fs.readFileSync('storage.rules', 'utf8'), host: '127.0.0.1', port: 9199 },
 })
 
-const UID_FPORT1 = 'uidDeFport1'
+// El uid real: storage.rules lo lleva fijo, asi que el test no puede inventarse otro.
+const UID_FPORT1 = 'KSLnFnpX1ibA1RgJ1aifB2VWOyi1'
 // Perfil de @fport1: es lo que miran las reglas para permitir los borrados.
 await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(), 'users', UID_FPORT1), { usernameSlug: 'fport1' })
@@ -23,6 +24,7 @@ await env.withSecurityRulesDisabled(async (ctx) => {
 const anon = env.unauthenticatedContext().firestore()
 const admin = env.authenticatedContext(UID_FPORT1).firestore()
 const anonSt = env.unauthenticatedContext().storage()
+const adminSt = env.authenticatedContext(UID_FPORT1).storage()
 
 let ok = 0
 const mal = []
@@ -147,6 +149,29 @@ await t('launcher_installs', 'permitido',
     { firstSeen: serverTimestamp(), lastSeen: serverTimestamp(), v: '1.10.1', launches: 1 }))
 await t('anónimo NO lee launcher_installs', 'denegado',
   () => getDoc(doc(anon, 'launcher_installs', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')))
+
+console.log('===== github_tokens: cerrada a cal y canto =====')
+await t('anonimo NO lo lee', 'denegado', () => getDoc(doc(anon, 'github_tokens', UID_FPORT1)))
+await t('ni el propio fport1 lo lee', 'denegado', () => getDoc(doc(admin, 'github_tokens', UID_FPORT1)))
+await t('anonimo NO escribe', 'denegado', () => setDoc(doc(anon, 'github_tokens', UID_FPORT1), { token: 'x' }))
+await t('ni el propio fport1 escribe', 'denegado', () => setDoc(doc(admin, 'github_tokens', UID_FPORT1), { token: 'x' }))
+
+console.log('===== fport1_projects: sigue igual =====')
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'fport1_projects', 'zzPub'), { published: true, downloads: 5 })
+  await setDoc(doc(ctx.firestore(), 'fport1_projects', 'zzPriv'), { published: false, downloads: 0 })
+})
+await t('cualquiera ve lo publicado', 'permitido', () => getDoc(doc(anon, 'fport1_projects', 'zzPub')))
+await t('nadie ve el borrador', 'denegado', () => getDoc(doc(anon, 'fport1_projects', 'zzPriv')))
+await t('suma 1 descarga', 'permitido', () => updateDoc(doc(anon, 'fport1_projects', 'zzPub'), { downloads: 6 }))
+await t('suma 5 descargas', 'denegado', () => updateDoc(doc(anon, 'fport1_projects', 'zzPriv'), { downloads: 5 }))
+await t('otro publica un borrador', 'denegado', () => updateDoc(doc(anon, 'fport1_projects', 'zzPriv'), { published: true }))
+await t('fport1 publica', 'permitido', () => updateDoc(doc(admin, 'fport1_projects', 'zzPriv'), { published: true }))
+
+console.log('===== storage: puente temporal =====')
+await t('anonimo NO sube al temporal', 'denegado', () => uploadBytes(ref(anonSt, 'fport1/tmp/' + UID_FPORT1 + '/x.jar'), new Uint8Array([1])))
+await t('fport1 sube al temporal', 'permitido', () => uploadBytes(ref(adminSt, 'fport1/tmp/' + UID_FPORT1 + '/x.jar'), new Uint8Array([1])))
+await t('nadie lee el temporal', 'denegado', () => getDownloadURL(ref(anonSt, 'fport1/tmp/' + UID_FPORT1 + '/x.jar')))
 
 await env.cleanup()
 console.log(`\nresumen: ${ok} correctas, ${mal.length} fallidas`)

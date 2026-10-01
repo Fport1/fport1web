@@ -200,6 +200,13 @@ service cloud.firestore {
     // Lo publica y administra solo @fport1; el resto del mundo únicamente ve lo
     // que está publicado. La única escritura ajena permitida es sumar 1 al
     // contador de descargas, y nada más de ese documento.
+    // Token de GitHub de 'fport1, cifrado. NADIE lo toca desde el cliente: solo
+    // el Admin SDK, que no pasa por estas reglas. Ese token abre sus repos
+    // privados, asi que ni siquiera su dueno debe poder leerlo desde el navegador.
+    match /github_tokens/{uid} {
+      allow read, write: if false;
+    }
+
     match /fport1_projects/{pid} {
       function esFport1() {
         return request.auth != null

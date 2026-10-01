@@ -95,6 +95,18 @@ service firebase.storage {
         && (request.resource == null || request.resource.size < 500 * 1024 * 1024);
     }
 
+    // Puente temporal para publicar archivos grandes en GitHub: una funcion de
+    // Vercel no admite cuerpos de mas de 4,5 MB, asi que el navegador de 'fport1
+    // sube aqui y el servidor lo copia a la release y borra el temporal. Nadie
+    // lo lee desde el cliente; el servidor usa el Admin SDK.
+    match /fport1/tmp/{uid}/{allPaths=**} {
+      allow read: if false;
+      allow write, delete: if request.auth != null
+        && request.auth.uid == 'KSLnFnpX1ibA1RgJ1aifB2VWOyi1'
+        && uid == request.auth.uid
+        && (request.resource == null || request.resource.size < 500 * 1024 * 1024);
+    }
+
     // Series de rendimiento del mod fport1-social (un json.gz por partida).
     // CERRADO a cal y canto para los clientes: se sube solo con las URLs
     // firmadas que emite /api/ai-data-upload, y esas no pasan por estas reglas
