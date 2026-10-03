@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-const GITHUB_API = 'https://api.github.com/repos/Fport1/modpacklauncher/releases/latest'
+const GITHUB_API = 'https://api.github.com/repos/Fport1/modpacklauncher-updates/releases/latest'
 
 async function detectOS() {
   if (typeof navigator === 'undefined') return 'unknown'
@@ -55,8 +55,6 @@ export default function Home() {
   const [assets, setAssets] = useState({ windows: null, macX64: null, macArm: null, linux: null })
   const [os, setOs] = useState('unknown')
   const [macGuideOpen, setMacGuideOpen] = useState(false)
-  const [macCopied, setMacCopied]       = useState(false)
-  const [macFlash, setMacFlash]         = useState(false)
 
   useEffect(() => {
     detectOS().then(setOs)
@@ -83,20 +81,12 @@ export default function Home() {
     'mac-unknown': 'Ver versiones de macOS ↓',
   }[os] ?? 'Detectando sistema...'
 
-  function copyMacCmd() {
-    navigator.clipboard.writeText('xattr -d com.apple.quarantine /Applications/ModpackLauncher.app')
-    setMacCopied(true)
-    setTimeout(() => setMacCopied(false), 2000)
-  }
 
   function openMacGuide() {
     setMacGuideOpen(true)
-    setMacFlash(false)
     setTimeout(() => {
-      setMacFlash(true)
       document.getElementById('mac-guide')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 50)
-    setTimeout(() => setMacFlash(false), 1400)
   }
 
   const S = {
@@ -243,86 +233,34 @@ export default function Home() {
           ))}
         </div>
 
-        {/* macOS guide — full detailed version */}
-        <div id="mac-guide" className={`mac-guide${macFlash ? ' flash' : ''}`} style={{ marginBottom: 24 }}>
-          <button
-            className="mac-guide-summary"
-            onClick={() => setMacGuideOpen(v => !v)}
-          >
-            <span>
-              🍎 ¿Cómo instalo en macOS?
-              <span className="summary-tag">¡Léeme antes de abrir!</span>
-            </span>
+        {/* Instalación en macOS: la app va firmada y notarizada, así que se
+            abre con doble clic. Solo queda el aviso normal de la primera vez. */}
+        <div id="mac-guide" className="mac-guide" style={{ marginBottom: 24 }}>
+          <button className="mac-guide-summary" onClick={() => setMacGuideOpen(v => !v)}>
+            <span>🍎 ¿Cómo instalo en macOS?</span>
             <span>{macGuideOpen ? '▲' : '▼'}</span>
           </button>
-
           {macGuideOpen && (
             <div className="mac-guide-body">
-              <div className="mac-warning-box">
-                <span className="warn-icon">⚠️</span>
-                <div>
-                  <strong>¿Por qué macOS dice que la app está dañada?</strong>
-                  <p>
-                    No está dañada para nada. Apple exige pagar <strong>$99 al año</strong> para
-                    "firmar" apps y que macOS las acepte sin drama. Como eso no es plata que todo
-                    el mundo tiene, macOS bloquea la app. Hay que decirle manualmente que confíes
-                    en ella. 👇
-                  </p>
-                </div>
-              </div>
-
               <div className="mac-steps">
                 <div className="mac-step">
                   <div className="step-num">1</div>
                   <div className="step-content">
-                    Descarga el archivo <strong>.dmg</strong> y ábrelo haciendo doble clic.
-                    Se monta como un USB virtual. Arrastra el ícono del launcher a la carpeta
-                    <em> Aplicaciones</em> que aparece al lado. 📂
+                    Descarga el <strong>.dmg</strong> y ábrelo haciendo doble clic.
                   </div>
                 </div>
                 <div className="mac-step">
                   <div className="step-num">2</div>
                   <div className="step-content">
-                    <strong>Expulsa el .dmg</strong> — en el Finder, barra lateral izquierda bajo
-                    "Ubicaciones", clic derecho sobre el disco → <em>Expulsar</em>. O arrástralo
-                    al icono de papelera. 💿➡️🗑️
+                    Arrastra <strong>ModpackLauncher</strong> a la carpeta <em>Aplicaciones</em>.
                   </div>
                 </div>
                 <div className="mac-step">
                   <div className="step-num">3</div>
                   <div className="step-content">
-                    Intenta abrir el launcher desde Aplicaciones. macOS va a decir que
-                    <strong> "ModpackLauncher está dañado y no se puede abrir"</strong>.
-                    Dale <em>OK</em> y cierra ese mensaje. 🚫
+                    Ábrelo desde Aplicaciones. La primera vez, macOS puede preguntarte si quieres
+                    abrir una app descargada de internet: pulsa <em>Abrir</em>.
                   </div>
-                </div>
-                <div className="mac-step">
-                  <div className="step-num">4</div>
-                  <div className="step-content">
-                    Abre <strong>Terminal</strong> — <kbd>⌘ Cmd</kbd> + <kbd>Espacio</kbd>,
-                    escribe "Terminal" y presiona <kbd>Enter</kbd>. Luego pega este comando:
-                  </div>
-                </div>
-              </div>
-
-              <div className="mac-code-block">
-                <code>xattr -d com.apple.quarantine /Applications/ModpackLauncher.app</code>
-                <button className="copy-btn" onClick={copyMacCmd}>
-                  {macCopied ? '¡Copiado!' : 'Copiar'}
-                </button>
-              </div>
-              <p className="mac-tip">
-                🔐 Si te pide contraseña: escríbela aunque no veas nada — así funciona Terminal,
-                es normal. Presiona <kbd>Enter</kbd> cuando termines. Si no muestra ningún error,
-                funcionó perfectamente.
-              </p>
-
-              <div className="mac-step">
-                <div className="step-num">5</div>
-                <div className="step-content">
-                  ¡Listo! Presiona <kbd>⌘ Cmd</kbd> + <kbd>Espacio</kbd>, escribe
-                  <strong> ModpackLauncher</strong> y presiona <kbd>Enter</kbd>. 🚀
-                  Abre normal. La próxima vez ya no hay que hacer nada extra.
                 </div>
               </div>
             </div>
@@ -331,7 +269,7 @@ export default function Home() {
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
           Ver todas las versiones en{' '}
-          <a href="https://github.com/Fport1/modpacklauncher/releases" target="_blank" rel="noopener" style={{ color: 'var(--accent2)' }}>
+          <a href="https://github.com/Fport1/modpacklauncher-updates/releases" target="_blank" rel="noopener" style={{ color: 'var(--accent2)' }}>
             GitHub Releases →
           </a>
         </p>
