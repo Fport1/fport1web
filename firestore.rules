@@ -2,9 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // El perfil es público (nombre, @usuario, foto, cuenta de Minecraft), así que
+    // aquí no puede entrar nada personal: el correo y los tokens de notificaciones
+    // van en users/{uid}/private/*, que solo lee su dueño. Un campo así que ya
+    // estuviera (documentos sin migrar) se puede dejar igual o quitar, pero no
+    // añadir ni cambiar.
+    function campoPrivadoIntacto(campo) {
+      return !(campo in request.resource.data)
+        || (resource != null && campo in resource.data
+            && request.resource.data[campo] == resource.data[campo]);
+    }
+
     match /users/{uid} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && campoPrivadoIntacto('email') && campoPrivadoIntacto('fcmTokens');
+
+      // Datos privados: correo (profile) y ajustes del chat y tokens de push
+      // (settings). Solo su dueño; @fport1 puede leer el correo para el panel
+      // de Doomsday, que busca y apunta usuarios por correo.
+      match /private/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read: if docId == 'profile' && request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameSlug == 'fport1';
+      }
       match /friends/{friendUid} {
         // Own list, or the friend writing/removing themselves (mutual operations)
         allow read, write: if request.auth != null
@@ -23,10 +45,22 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Launcher sessions — public read (launcher reads before signing in)
+    // Inicio de sesión del launcher con Google: la web deja aquí los tokens y el
+    // launcher, que conoce el código, los recoge sin sesión y borra el documento.
+    // Llevan tokens de Google válidos durante una hora, así que la colección NO
+    // se puede listar: solo se lee un documento sabiendo su código.
     match /launcher_sessions/{code} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && code.matches('^[a-z0-9]{8,32}$')
+        && request.resource.data.keys().hasOnly(['idToken', 'accessToken', 'createdAt'])
+        && request.resource.data.idToken is string
+        && request.resource.data.idToken.size() < 4096
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      // El launcher lo borra al recogerlo, haya podido iniciar sesión o no
+      allow delete: if true;
     }
 
     // Ayudar a un amigo (launcher) — señalización WebRTC entre dos launchers.
@@ -146,9 +180,10 @@ service cloud.firestore {
     }
 
     // Accesos concedidos por el admin. Cada quien puede consultar el suyo
-    // (el nav lo necesita); listar y modificar es solo del admin.
+    // (el nav lo necesita); listar y modificar es solo del admin. El documento
+    // lleva el correo, así que nadie más puede leer el de otro.
     match /doomsday_access/{uid} {
-      allow get:   if request.auth != null;
+      allow get:   if request.auth != null && (request.auth.uid == uid || isDoomsdayAdmin());
       allow list:  if isDoomsdayAdmin();
       allow write: if isDoomsdayAdmin();
     }

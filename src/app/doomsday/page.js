@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { db } from '@/lib/firebase'
 import {
-  collection, doc, getDocs, onSnapshot, orderBy, query,
+  collection, doc, getDoc, getDocs, onSnapshot, orderBy, query,
   setDoc, deleteDoc, updateDoc, serverTimestamp, limit, increment,
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
@@ -206,7 +206,17 @@ export default function DoomsdayPage() {
     setLoadingUsers(true)
     try {
       const snap = await getDocs(query(collection(db, 'users'), limit(300)))
-      setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
+      // El correo ya no está en el perfil público: se lee de users/{uid}/private/profile,
+      // que solo puede leer @fport1. Si un perfil aún no se migró, vale el de siempre.
+      const conCorreo = await Promise.all(snap.docs.map(async d => {
+        const u = { uid: d.id, ...d.data() }
+        try {
+          const priv = await getDoc(doc(db, 'users', d.id, 'private', 'profile'))
+          if (priv.exists() && priv.data().email) u.email = priv.data().email
+        } catch { /* sin correo: se busca por nombre y @usuario */ }
+        return u
+      }))
+      setAllUsers(conCorreo)
     } catch (e) { console.error(e) }
     setLoadingUsers(false)
   }

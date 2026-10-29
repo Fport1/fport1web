@@ -27,6 +27,8 @@ export async function reserveUsernameAndUpsertProfile({ uid, email, profileName,
 
   const unameRef = doc(db, 'usernames', slug)
   const userRef = doc(db, 'users', uid)
+  // El perfil es público: el correo va aparte, donde solo lo lee su dueño
+  const privateRef = doc(db, 'users', uid, 'private', 'profile')
 
   await runTransaction(db, async (tx) => {
     const unameSnap = await tx.get(unameRef)
@@ -35,7 +37,6 @@ export async function reserveUsernameAndUpsertProfile({ uid, email, profileName,
     const now = serverTimestamp()
     const base = {
       uid,
-      email: email || null,
       username: `@${slug}`,
       usernameSlug: slug,
       profileName: String(profileName || '').slice(0, DISPLAY_NAME_MAX),
@@ -49,6 +50,7 @@ export async function reserveUsernameAndUpsertProfile({ uid, email, profileName,
 
     tx.set(unameRef, { uid, createdAt: now })
     tx.set(userRef, base, { merge: true })
+    if (email) tx.set(privateRef, { email, updatedAt: now }, { merge: true })
   })
 
   return `@${slug}`

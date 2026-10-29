@@ -93,9 +93,9 @@ export default function ChatNotifier() {
                 const messaging = getMessaging();
                 const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: reg });
                 if (token && !cancelled) {
-                    // fport1web guarda todo plano en users/{uid}; la API de notify
-                    // ya contempla este caso además del subdocumento privado.
-                    await setDoc(doc(db, "users", user.uid), { fcmTokens: arrayUnion(token) }, { merge: true });
+                    // El token de push es privado: va con los ajustes del chat, que
+                    // es donde lo busca primero la API de notify.
+                    await setDoc(doc(db, "users", user.uid, "private", "settings"), { fcmTokens: arrayUnion(token) }, { merge: true });
                 }
             } catch (_) { /* sin push: el foreground sigue funcionando */ }
         })();

@@ -6,3 +6,6 @@ out/
 *.log
 .DS_Store
 .vercel
+
+# Informes de la migracion de datos privados (llevan uids)
+migracion-*.json
