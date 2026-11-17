@@ -9,6 +9,10 @@ import {
   setDoc, deleteDoc, updateDoc, serverTimestamp, limit, increment,
 } from 'firebase/firestore'
 import AvengersLogo from '@/components/AvengersLogo'
+import {
+  SparklesIcon, FilmIcon, LockClosedIcon, FaceFrownIcon, TicketIcon, UsersIcon,
+  ShieldCheckIcon, ChartBarIcon, KeyIcon, CheckIcon,
+} from '@heroicons/react/24/outline'
 import EmberParticles from '@/components/EmberParticles'
 import { useDoomsdayAccess, DOOMSDAY_ADMIN_SLUG } from '@/lib/useDoomsdayAccess'
 import { notificar } from '@/lib/notify'
@@ -297,7 +301,7 @@ export default function DoomsdayPage() {
   // Sin sesión o sin permiso no se muestra nada
   if (loading || switching || checking || !user || !hasAccess) {
     return (
-      <main className="dd-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <main className="dd-page tema-oscuro" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <p style={{ color: 'var(--muted)', fontSize: 14 }}>Cargando…</p>
       </main>
     )
@@ -307,7 +311,7 @@ export default function DoomsdayPage() {
   const boughtCount  = rsvps.filter(r => r.bought).length
 
   return (
-    <main className="dd-page">
+    <main className="dd-page tema-oscuro">
       <div className="dd-glow" />
       <EmberParticles />
 
@@ -339,7 +343,7 @@ export default function DoomsdayPage() {
           </div>
           <div className="dd-fact">
             <span className="dd-fact-label">Código de vestir</span>
-            <span className="dd-fact-value">🎭 Gala y túnica verde</span>
+            <span className="dd-fact-value"><SparklesIcon className="ico" aria-hidden="true" /> Gala y túnica verde</span>
           </div>
         </div>
 
@@ -355,7 +359,7 @@ export default function DoomsdayPage() {
 
       {/* ── RSVP ── */}
       <section className="dd-card">
-        <h2 className="dd-section-title">🎬 ¿Vas a ir al estreno?</h2>
+        <h2 className="dd-section-title"><FilmIcon className="ico" aria-hidden="true" /> ¿Vas a ir al estreno?</h2>
         <p className="dd-section-sub">
           Confirma tu asistencia para coordinar la preventa en grupo. Cuando abra la preventa,
           se disputarán las sillas de la sala — <strong>@fport1</strong> coordina todo.
@@ -371,12 +375,12 @@ export default function DoomsdayPage() {
 
               {locked ? (
                 <div className="dd-status-pill dd-status-locked">
-                  <span>🔒</span>
+                  <LockClosedIcon className="ico" aria-hidden="true" />
                   <span>Boleta comprada — ya no puedes salirte</span>
                 </div>
               ) : !leaving ? (
                 <button className="dd-status-pill dd-status-danger" onClick={() => setLeaving(true)}>
-                  Ya no voy 😔
+                  Ya no voy <FaceFrownIcon className="ico" aria-hidden="true" />
                 </button>
               ) : null}
             </div>
@@ -387,7 +391,7 @@ export default function DoomsdayPage() {
           </>
         ) : (
           <button onClick={confirmGoing} disabled={busy} className="dd-btn dd-btn-main">
-            ¡CONFIRMO, VOY! 🍿
+            ¡CONFIRMO, VOY! <TicketIcon className="ico" aria-hidden="true" />
           </button>
         )}
       </section>
@@ -395,7 +399,7 @@ export default function DoomsdayPage() {
       {/* ── Reclutados: se ve cuántos van, nunca quiénes ── */}
       {!isAdmin && (
         <section className="dd-card">
-          <h2 className="dd-section-title">🦸 Reclutados</h2>
+          <h2 className="dd-section-title"><UsersIcon className="ico" aria-hidden="true" /> Reclutados</h2>
           <div className="dd-recruited">
             <span className="dd-recruited-num">{goingCount ?? '—'}</span>
             <span className="dd-recruited-label">
@@ -403,14 +407,14 @@ export default function DoomsdayPage() {
             </span>
           </div>
           <p className="dd-section-sub" style={{ marginTop: 18, marginBottom: 0 }}>
-            🔒 Solo se muestra el número. Quién va y quién no lo maneja <strong>@fport1</strong>.
+            <LockClosedIcon className="ico" aria-hidden="true" /> Solo se muestra el número. Quién va y quién no lo maneja <strong>@fport1</strong>.
           </p>
         </section>
       )}
 
       {/* ── Info de la función ── */}
       <section className="dd-card">
-        <h2 className="dd-section-title">🎟️ Datos de la función</h2>
+        <h2 className="dd-section-title"><TicketIcon className="ico" aria-hidden="true" /> Datos de la función</h2>
         <ul className="dd-info-list">
           <li><strong>Preventa:</strong> según rumores abre <strong>mañana</strong>. Nada oficial todavía — hay que estar pendientes para caerle apenas abra.</li>
           <li><strong>Nuestra función:</strong> será entre el <strong>16 y el 18 de diciembre, por la noche</strong>. El día exacto se define cuando abra la preventa.</li>
@@ -424,13 +428,13 @@ export default function DoomsdayPage() {
         <>
           <div className="dd-admin-divider">
             <span className="dd-admin-divider-line" />
-            <span className="dd-admin-divider-text">🛡️ Zona de administración — solo tú ves esto</span>
+            <span className="dd-admin-divider-text"><ShieldCheckIcon className="ico" aria-hidden="true" /> Zona de administración — solo tú ves esto</span>
             <span className="dd-admin-divider-line" />
           </div>
 
           {/* Resumen */}
           <section className="dd-card dd-gold">
-            <h2 className="dd-gold-title">📊 Resumen</h2>
+            <h2 className="dd-gold-title"><ChartBarIcon className="ico" aria-hidden="true" /> Resumen</h2>
             <div className="dd-stats">
               <div className="dd-stat">
                 <span className="dd-stat-num">{rsvps.length}</span>
@@ -465,7 +469,7 @@ export default function DoomsdayPage() {
 
           {/* Accesos */}
           <section className="dd-card dd-gold">
-            <h2 className="dd-gold-title">🔑 Dar acceso a la página</h2>
+            <h2 className="dd-gold-title"><KeyIcon className="ico" aria-hidden="true" /> Dar acceso a la página</h2>
             <p className="dd-gold-sub">
               Busca por nombre, usuario o correo. Al darle acceso, a esa persona le aparece
               el botón de Avengers en el menú y puede entrar aquí.
@@ -534,7 +538,7 @@ export default function DoomsdayPage() {
           {/* Control de boletas */}
           <section className="dd-card dd-gold">
             <h2 className="dd-gold-title">
-              🎫 Reclutados, boletas y sillas <span className="dd-count-pill">{rsvps.length}</span>
+              <TicketIcon className="ico" aria-hidden="true" /> Reclutados, boletas y sillas <span className="dd-count-pill">{rsvps.length}</span>
             </h2>
             <p className="dd-gold-sub">
               Marca quién ya compró. Al marcar <strong>Comprada</strong> esa persona queda bloqueada
@@ -563,7 +567,7 @@ export default function DoomsdayPage() {
                           className={`dd-bought-toggle ${r.bought ? 'on' : ''}`}
                           onClick={() => toggleBought(r)}
                         >
-                          {r.bought ? '🎟️ Comprada' : 'Sin comprar'}
+                          {r.bought ? <><TicketIcon className="ico" aria-hidden="true" /> Comprada</> : 'Sin comprar'}
                         </button>
                         <button className="dd-mini-btn dd-mini-danger" onClick={() => removePerson(r.uid)} title="Quitar de la lista">✕</button>
                       </div>
@@ -598,6 +602,8 @@ export default function DoomsdayPage() {
       )}
 
       <style>{`
+        /* Doomsday mantiene su estética oscura aunque el sistema esté en claro. */
+        body:has(.dd-page) { background: #09090b; }
         .dd-page {
           min-height: 100vh; max-width: 860px; margin: 0 auto;
           padding: 100px 20px 60px; position: relative; z-index: 1;

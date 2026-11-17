@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { BellIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import PerfilNav from '@/components/PerfilNav'
@@ -71,7 +72,7 @@ function NotifRow({ n, onRead, autor }) {
       onClick={() => !n.read && onRead(n.id)}
     >
       <Link href={perfilHref} className="shrink-0 mt-0.5">
-        <div className="h-10 w-10 rounded-full overflow-hidden bg-neutral-800 ring-1 ring-white/10 flex items-center justify-center text-sm">
+        <div className="h-10 w-10 rounded-full overflow-hidden bg-[var(--bg3)] ring-1 ring-white/10 flex items-center justify-center text-sm">
           {photo
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={photo} alt={name} className="h-full w-full object-cover" />
@@ -187,7 +188,7 @@ export default function NotificacionesPage() {
   if (loading || !user) return null
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <div className="mx-auto max-w-4xl px-4 pt-20 pb-8 md:px-6">
         <div className="flex gap-6">
           <PerfilNav className="hidden md:block md:w-[260px] shrink-0" />
@@ -225,7 +226,7 @@ export default function NotificacionesPage() {
               />
             ) : notifs.length === 0 ? (
               <div className="py-16 text-center text-white/40 text-sm">
-                <p className="text-3xl mb-3">🔔</p>
+                <BellIcon className="w-8 h-8 mx-auto mb-3 opacity-70" aria-hidden="true" />
                 <p>Sin notificaciones por ahora.</p>
               </div>
             ) : (

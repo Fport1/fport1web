@@ -42,7 +42,7 @@ export default function PerfilNav({ className = '' }) {
 
   return (
     <aside className={`w-full ${className}`}>
-      <div className="rounded-2xl border border-white/10 p-2 bg-black/40 backdrop-blur">
+      <div className="rounded-2xl border border-white/10 p-2 bg-[var(--card)]/60 backdrop-blur">
         <div className="space-y-0.5">
           <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-white/40 select-none">Navegación</div>
           <Row href="/perfil"   label="Perfil"   Icon={UserCircleIcon} isActive={active('/perfil')} />

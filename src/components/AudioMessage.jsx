@@ -113,7 +113,7 @@ export default function AudioMessage({ src, mine = false, durationHint = 0 }) {
   }
 
   const pct = dur ? Math.min(100, (cur / dur) * 100) : 0;
-  const accent = mine ? "bg-white" : "bg-blue-400";
+  const accent = mine ? "bg-[#fff]" : "bg-blue-400";
   const track = mine ? "bg-white/25" : "bg-white/15";
 
   return (

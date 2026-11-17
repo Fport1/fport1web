@@ -9,6 +9,7 @@ import {
   query, where, orderBy, onSnapshot, serverTimestamp, limit,
 } from 'firebase/firestore'
 import PerfilNav from '@/components/PerfilNav'
+import { LinkIcon, PlayIcon } from '@heroicons/react/24/outline'
 import { setVisibility, resolvePresence } from '@/lib/presence'
 import { notificar } from '@/lib/notify'
 
@@ -211,7 +212,7 @@ export default function PerfilPage() {
           {myHandle && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }}>@{myHandle}</p>}
         </div>
         <button onClick={copyMyLink} style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, cursor: 'pointer' }}>
-          {copyFriendLink ? '¡Copiado!' : '🔗 Mi enlace'}
+          {copyFriendLink ? '¡Copiado!' : <><LinkIcon className="ico" aria-hidden="true" /> Mi enlace</>}
         </button>
       </div>
 
@@ -232,7 +233,7 @@ export default function PerfilPage() {
       </div>
 
       {actionMsg && (
-        <p style={{ fontSize: 13, color: actionMsg.type === 'ok' ? '#4ade80' : '#f87171', margin: '0 0 12px' }}>
+        <p style={{ fontSize: 13, color: actionMsg.type === 'ok' ? 'var(--ok)' : 'var(--err)', margin: '0 0 12px' }}>
           {actionMsg.text}
         </p>
       )}
@@ -254,19 +255,19 @@ export default function PerfilPage() {
               <div key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <Avatar src={head ?? f.photoURL} name={fname} size={40} />
-                  {p?.playing && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#4ade80', border: '2px solid var(--card)' }} />}
-                  {!p?.playing && p?.online && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#60a5fa', border: '2px solid var(--card)' }} />}
+                  {p?.playing && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: 'var(--ok)', border: '2px solid var(--card)' }} />}
+                  {!p?.playing && p?.online && <span style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: 'var(--info)', border: '2px solid var(--card)' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{fname}</p>
-                  <p style={{ fontSize: 12, margin: '2px 0 0', color: p?.playing ? '#4ade80' : p?.online ? '#60a5fa' : 'var(--muted)' }}>
-                    {p?.playing ? '🎮 Jugando ahora' : p?.online ? 'En línea' : 'Desconectado'}
+                  <p style={{ fontSize: 12, margin: '2px 0 0', color: p?.playing ? 'var(--ok)' : p?.online ? 'var(--info)' : 'var(--muted)' }}>
+                    {p?.playing ? <><PlayIcon className="ico" aria-hidden="true" /> Jugando ahora</> : p?.online ? 'En línea' : 'Desconectado'}
                   </p>
                 </div>
                 <button onClick={() => router.push(`/mensajes?u=${f.uid}`)} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>Chat</button>
                 <button onClick={() => removeFriend(f.uid)} title="Eliminar amigo"
                   style={{ padding: '6px 10px', borderRadius: 8, background: 'none', border: '1px solid transparent', color: 'var(--muted)', cursor: 'pointer', transition: 'all .15s', display: 'flex', alignItems: 'center' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = '#f87171' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = 'var(--err)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
                 </button>
@@ -296,7 +297,7 @@ export default function PerfilPage() {
               </button>
               <button onClick={() => declineRequest(req.id)}
                 style={{ padding: '6px 12px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer', transition: 'all .15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = '#f87171' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = 'var(--err)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}>
                 Rechazar
               </button>
@@ -331,16 +332,16 @@ export default function PerfilPage() {
                     {uhandle && <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 0' }}>@{uhandle}</p>}
                   </div>
                   {isFriend ? (
-                    <span style={{ fontSize: 12, color: '#4ade80', padding: '6px 10px' }}>Amigos ✓</span>
+                    <span style={{ fontSize: 12, color: 'var(--ok)', padding: '6px 10px' }}>Amigos ✓</span>
                   ) : incomingReq ? (
                     <button onClick={() => acceptRequest(incomingReq)}
-                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,.3)', fontSize: 13, cursor: 'pointer' }}>
+                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,.1)', color: 'var(--ok)', border: '1px solid rgba(74,222,128,.3)', fontSize: 13, cursor: 'pointer' }}>
                       Aceptar solicitud
                     </button>
                   ) : hasSent ? (
                     <button onClick={() => cancelRequest(u.uid)}
                       style={{ padding: '6px 14px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer', transition: 'all .15s' }}
-                      onMouseEnter={e => { e.currentTarget.textContent = 'Cancelar'; e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = '#f87171' }}
+                      onMouseEnter={e => { e.currentTarget.textContent = 'Cancelar'; e.currentTarget.style.borderColor = 'rgba(239,68,68,.4)'; e.currentTarget.style.color = 'var(--err)' }}
                       onMouseLeave={e => { e.currentTarget.textContent = 'Enviada ✓'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}>
                       Enviada ✓
                     </button>

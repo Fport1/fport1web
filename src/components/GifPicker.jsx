@@ -161,7 +161,7 @@ export default function GifPicker({ open, anchorEl, onClose, onPick }) {
     // (flex-1 + min-h-0) y el resto queda fijo, así nada se sale del recuadro.
     <div
       ref={panelRef}
-      className="fixed z-[80] flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl p-3"
+      className="fixed z-[80] flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--card)] shadow-2xl p-3"
       style={{
         left: pos.left,
         width: pos.width,

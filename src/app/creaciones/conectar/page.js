@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth-context'
 import { auth } from '@/lib/firebase'
@@ -135,7 +136,7 @@ function Contenido() {
       </div>
 
       <p className="gh-nota">
-        🔒 El permiso se guarda cifrado en el servidor y nunca llega al navegador. Puedes retirarlo cuando
+        <LockClosedIcon className="ico" aria-hidden="true" /> El permiso se guarda cifrado en el servidor y nunca llega al navegador. Puedes retirarlo cuando
         quieras, aquí o desde los ajustes de tu cuenta de GitHub.
       </p>
 
@@ -166,12 +167,12 @@ export default function ConectarGitHub() {
         .gh-boton:hover:not(:disabled) { background:var(--accent2); }
         .gh-boton:disabled { opacity:.6; cursor:not-allowed; }
         .gh-secundario { background:transparent; border:1px solid var(--border); color:var(--sub); }
-        .gh-secundario:hover:not(:disabled) { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.4); color:#f87171; }
+        .gh-secundario:hover:not(:disabled) { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.4); color:var(--err); }
         .gh-mensaje { border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:16px; }
-        .gh-ok { background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.3); color:#4ade80; }
+        .gh-ok { background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.3); color:var(--ok); }
         .gh-aviso { color:var(--muted); font-size:14px; text-align:center; padding:40px 0; }
-        .gh-mensaje.gh-aviso { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); color:#fbbf24; text-align:left; padding:12px 16px; }
-        .gh-error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#f87171; }
+        .gh-mensaje.gh-aviso { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); color:var(--warn); text-align:left; padding:12px 16px; }
+        .gh-error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:var(--err); }
         .gh-nota { font-size:12px; color:var(--muted); line-height:1.6; margin:18px 0 0; }
         .gh-enlace { display:inline-block; margin-top:20px; color:var(--accent2); font-size:13px; text-decoration:none; }
         .gh-enlace:hover { text-decoration:underline; }

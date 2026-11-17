@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import {
+  BoltIcon, GlobeAltIcon, ComputerDesktopIcon, Square3Stack3DIcon, PaintBrushIcon, UsersIcon,
+  FolderIcon, PuzzlePieceIcon, Cog6ToothIcon, CubeIcon, SparklesIcon, FireIcon, InformationCircleIcon,
+} from '@heroicons/react/24/outline'
 
 const GITHUB_API = 'https://api.github.com/repos/Fport1/modpacklauncher-updates/releases/latest'
 
@@ -103,7 +107,7 @@ export default function Home() {
     secTitle:   { fontFamily: 'Rajdhani, sans-serif', fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, textAlign: 'center', marginBottom: 48 },
     grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 },
     card:       { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 24px' },
-    cardIcon:   { fontSize: 32, marginBottom: 14 },
+    cardIcon:   { color: 'var(--accent2)', marginBottom: 14 },
     cardTitle:  { fontFamily: 'Rajdhani, sans-serif', fontSize: 20, fontWeight: 600, marginBottom: 8 },
     cardText:   { fontSize: 14, color: 'var(--sub)', lineHeight: 1.6 },
     dlGrid:     { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 32 },
@@ -114,12 +118,12 @@ export default function Home() {
   }
 
   const features = [
-    { icon: '⚡', title: 'Auto-update', text: 'El launcher se actualiza solo. Tus modpacks también, sin que toques nada.' },
-    { icon: '🌐', title: 'Modrinth integrado', text: 'Busca e instala mods directamente desde Modrinth sin salir del launcher.' },
-    { icon: '🖥', title: 'Cross-platform', text: 'Windows, macOS (Intel y Apple Silicon) y Linux. Un solo launcher para todo.' },
-    { icon: '🎮', title: 'Múltiples instancias', text: 'Administra Fabric, Forge y NeoForge en la misma interfaz, sin conflictos.' },
-    { icon: '🎨', title: 'Vista 3D de skin', text: 'Previsualiza tu skin de Minecraft en 3D directamente desde el perfil.' },
-    { icon: '👥', title: 'Amigos y chat', text: 'Añade amigos, ve quién está jugando ahora mismo y chatea desde el launcher.' },
+    { icon: BoltIcon, title: 'Auto-update', text: 'El launcher se actualiza solo. Tus modpacks también, sin que toques nada.' },
+    { icon: GlobeAltIcon, title: 'Modrinth integrado', text: 'Busca e instala mods directamente desde Modrinth sin salir del launcher.' },
+    { icon: ComputerDesktopIcon, title: 'Cross-platform', text: 'Windows, macOS (Intel y Apple Silicon) y Linux. Un solo launcher para todo.' },
+    { icon: Square3Stack3DIcon, title: 'Múltiples instancias', text: 'Administra Fabric, Forge y NeoForge en la misma interfaz, sin conflictos.' },
+    { icon: PaintBrushIcon, title: 'Vista 3D de skin', text: 'Previsualiza tu skin de Minecraft en 3D directamente desde el perfil.' },
+    { icon: UsersIcon, title: 'Amigos y chat', text: 'Añade amigos, ve quién está jugando ahora mismo y chatea desde el launcher.' },
   ]
 
   const dlPlatforms = [
@@ -160,7 +164,7 @@ export default function Home() {
 
           {/* Mockup */}
           <div style={{ flex: '0 0 420px', maxWidth: '100%', position: 'relative', zIndex: 1 }}>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 60px rgba(124,58,237,.2), 0 24px 80px rgba(0,0,0,.6)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 60px rgba(124,58,237,.2), 0 24px 80px var(--shadow)' }}>
               <div style={{ background: 'var(--bg3)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
                 <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
@@ -169,14 +173,14 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', height: 220 }}>
                 <div style={{ width: 130, background: 'var(--bg2)', borderRight: '1px solid var(--border)', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {['🗂 Instancias', '🧩 Mods', '👥 Amigos', '⚙️ Ajustes'].map((item, i) => (
-                    <div key={i} style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, background: i === 0 ? 'rgba(124,58,237,.2)' : 'transparent', color: i === 0 ? 'var(--accent2)' : 'var(--muted)' }}>{item}</div>
+                  {[[FolderIcon, 'Instancias'], [PuzzlePieceIcon, 'Mods'], [UsersIcon, 'Amigos'], [Cog6ToothIcon, 'Ajustes']].map(([Icon, item], i) => (
+                    <div key={i} style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, background: i === 0 ? 'rgba(124,58,237,.2)' : 'transparent', color: i === 0 ? 'var(--accent2)' : 'var(--muted)' }}><Icon width={14} height={14} aria-hidden="true" />{item}</div>
                   ))}
                 </div>
                 <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[['⛏', 'SkyBlock Ultra', 'Fabric 1.21 · 47 mods'], ['🌲', 'Better Survival', 'Forge 1.20.1 · 83 mods'], ['🔮', 'Magic Realm', 'NeoForge 1.21 · 61 mods']].map(([icon, name, meta], i) => (
+                  {[[CubeIcon, 'SkyBlock Ultra', 'Fabric 1.21 · 47 mods'], [FireIcon, 'Better Survival', 'Forge 1.20.1 · 83 mods'], [SparklesIcon, 'Magic Realm', 'NeoForge 1.21 · 61 mods']].map(([Icon, name, meta], i) => (
                     <div key={i} style={{ background: 'var(--bg3)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 20 }}>{icon}</span>
+                      <span style={{ color: 'var(--accent2)', display: 'flex' }}><Icon width={20} height={20} aria-hidden="true" /></span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
                         <div style={{ fontSize: 11, color: 'var(--muted)' }}>{meta}</div>
@@ -197,7 +201,7 @@ export default function Home() {
         <div style={S.grid}>
           {features.map(f => (
             <div key={f.title} style={S.card} className="card-hover">
-              <div style={S.cardIcon}>{f.icon}</div>
+              <div style={S.cardIcon}><f.icon width={30} height={30} aria-hidden="true" /></div>
               <h3 style={S.cardTitle}>{f.title}</h3>
               <p style={S.cardText}>{f.text}</p>
             </div>
@@ -237,7 +241,7 @@ export default function Home() {
             abre con doble clic. Solo queda el aviso normal de la primera vez. */}
         <div id="mac-guide" className="mac-guide" style={{ marginBottom: 24 }}>
           <button className="mac-guide-summary" onClick={() => setMacGuideOpen(v => !v)}>
-            <span>🍎 ¿Cómo instalo en macOS?</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><InformationCircleIcon width={18} height={18} aria-hidden="true" />¿Cómo instalo en macOS?</span>
             <span>{macGuideOpen ? '▲' : '▼'}</span>
           </button>
           {macGuideOpen && (

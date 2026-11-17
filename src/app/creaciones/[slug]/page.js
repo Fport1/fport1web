@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { useParams } from 'next/navigation'
 import {
   collection, doc, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where, increment,
@@ -158,7 +159,7 @@ export default function FichaCreacion() {
           <h1 className="cr-ficha-titulo">{p.title}</h1>
           {p.summary && <p className="cr-ficha-resumen">{p.summary}</p>}
           <div className="cr-metadatos">
-            <span className="cr-descargas">⬇ {(p.downloads || 0).toLocaleString('es-CO')} descargas</span>
+            <span className="cr-descargas"><ArrowDownTrayIcon className="ico" aria-hidden="true" /> {(p.downloads || 0).toLocaleString('es-CO')} descargas</span>
             {p.latestVersion && <span className="cr-chip">v{p.latestVersion}</span>}
           </div>
         </div>
@@ -225,7 +226,7 @@ export default function FichaCreacion() {
             <h3 className="cr-caja-titulo">Licencia</h3>
             <div className="cr-fila">
               <span>Código</span>
-              <strong style={{ color: p.openSource ? '#4ade80' : 'var(--sub)' }}>
+              <strong style={{ color: p.openSource ? 'var(--ok)' : 'var(--sub)' }}>
                 {p.openSource ? 'Abierto' : 'Cerrado'}
               </strong>
             </div>
@@ -279,7 +280,7 @@ export default function FichaCreacion() {
         .cr-icono-vacio { display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:36px; font-weight:700; color:var(--muted); }
         .cr-ficha-info { min-width:0; }
         .cr-ficha-tipo { font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--accent2); margin-bottom:4px; }
-        .cr-destacado { color:#fbbf24; }
+        .cr-destacado { color:var(--warn); }
         .cr-ficha-titulo { font-family:'Rajdhani',sans-serif; font-size:36px; font-weight:700; margin:0 0 6px; line-height:1.1; }
         .cr-ficha-resumen { color:var(--sub); font-size:15px; margin:0 0 10px; }
         .cr-columnas { display:grid; grid-template-columns:1fr 300px; gap:28px; align-items:start; }
@@ -301,9 +302,9 @@ export default function FichaCreacion() {
         .cr-version-cabecera { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
         .cr-version-nombre { font-size:16px; font-weight:600; margin:0 0 8px; }
         .cr-canal { font-size:11px; font-weight:700; border-radius:999px; padding:3px 10px; }
-        .cr-canal-release { background:rgba(74,222,128,.12); color:#4ade80; }
-        .cr-canal-beta { background:rgba(251,191,36,.12); color:#fbbf24; }
-        .cr-canal-alpha { background:rgba(248,113,113,.12); color:#f87171; }
+        .cr-canal-release { background:rgba(74,222,128,.12); color:var(--ok); }
+        .cr-canal-beta { background:rgba(251,191,36,.12); color:var(--warn); }
+        .cr-canal-alpha { background:rgba(248,113,113,.12); color:var(--err); }
         .cr-descargar {
           flex-shrink:0; background:var(--accent); color:#fff; border:none; border-radius:10px;
           padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; transition:background .2s;

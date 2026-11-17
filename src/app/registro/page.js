@@ -226,7 +226,7 @@ function RegisterPage() {
         </button>
 
         {googleError && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 13, marginTop: 12 }}>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: 'var(--err)', fontSize: 13, marginTop: 12 }}>
             {googleError}
           </div>
         )}
@@ -245,7 +245,7 @@ function RegisterPage() {
               maxLength={DISPLAY_NAME_MAX}
               style={inputStyle(touched.profileName && !profileNameOk ? 'error' : 'idle')}
             />
-            {touched.profileName && !profileNameOk && <Hint color="#f87171">Mínimo 2 caracteres.</Hint>}
+            {touched.profileName && !profileNameOk && <Hint color="var(--err)">Mínimo 2 caracteres.</Hint>}
           </Field>
 
           <Field label="Usuario">
@@ -294,7 +294,7 @@ function RegisterPage() {
               availableText="Disponible ✓"
               takenText="Ese correo ya está registrado."
             />
-            {touched.email && !emailFormatOk && form.email && <Hint color="#f87171">Correo inválido.</Hint>}
+            {touched.email && !emailFormatOk && form.email && <Hint color="var(--err)">Correo inválido.</Hint>}
           </Field>
 
           <Field label="Contraseña">
@@ -311,7 +311,7 @@ function RegisterPage() {
                 <EyeIcon open={show1} />
               </button>
             </div>
-            {touched.pass && !passLenOk && <Hint color="#f87171">Mínimo 8 caracteres.</Hint>}
+            {touched.pass && !passLenOk && <Hint color="var(--err)">Mínimo 8 caracteres.</Hint>}
           </Field>
 
           <Field label="Confirmar contraseña">
@@ -328,7 +328,7 @@ function RegisterPage() {
                 <EyeIcon open={show2} />
               </button>
             </div>
-            {showPassMismatch && <Hint color="#f87171">Las contraseñas no coinciden.</Hint>}
+            {showPassMismatch && <Hint color="var(--err)">Las contraseñas no coinciden.</Hint>}
           </Field>
 
           <Field label="Usuario de Minecraft (opcional)">
@@ -357,10 +357,10 @@ function RegisterPage() {
               <a href="#" onClick={e => e.preventDefault()} style={{ color: 'var(--accent2)' }}>Política de privacidad</a>.
             </span>
           </label>
-          {touched.acepta && !aceptaOk && <Hint color="#f87171">Debes aceptar los términos para continuar.</Hint>}
+          {touched.acepta && !aceptaOk && <Hint color="var(--err)">Debes aceptar los términos para continuar.</Hint>}
 
           {serverError && (
-            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 13 }}>
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: 'var(--err)', fontSize: 13 }}>
               {serverError}
             </div>
           )}
@@ -405,11 +405,11 @@ function Hint({ color, children }) {
 }
 
 function StatusHint({ status, syntaxOk, touched, msg, checkingText, availableText, takenText, uncheckedText }) {
-  if (status === 'checking')                return <Hint color="#facc15"><TinySpinner />{checkingText}</Hint>
-  if (status === 'available' && syntaxOk)   return <Hint color="#4ade80">{availableText}</Hint>
-  if (status === 'taken')                   return <Hint color="#f87171">{takenText}</Hint>
+  if (status === 'checking')                return <Hint color="var(--warn)"><TinySpinner />{checkingText}</Hint>
+  if (status === 'available' && syntaxOk)   return <Hint color="var(--ok)">{availableText}</Hint>
+  if (status === 'taken')                   return <Hint color="var(--err)">{takenText}</Hint>
   if (status === 'unchecked' && uncheckedText) return <Hint color="#94a3b8">{uncheckedText}</Hint>
-  if (touched && !syntaxOk && msg)          return <Hint color="#f87171">{msg}</Hint>
+  if (touched && !syntaxOk && msg)          return <Hint color="var(--err)">{msg}</Hint>
   return null
 }
 

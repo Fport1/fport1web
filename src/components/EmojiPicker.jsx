@@ -133,7 +133,7 @@ export default function EmojiPicker({ onPick, onClose, className = "" }) {
   return (
     <div
       className={clsxLite(
-        "w-[min(360px,92vw)] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur shadow-xl overflow-hidden",
+        "w-[min(360px,92vw)] rounded-2xl border border-white/10 bg-[var(--card)]/95 backdrop-blur shadow-xl overflow-hidden",
         className
       )}
     >

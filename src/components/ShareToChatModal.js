@@ -105,7 +105,7 @@ export default function ShareToChatModal({ user, shareType, shareData, onClose }
 
     return (
         <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
-            <div className="w-full sm:w-80 bg-neutral-900 border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="w-full sm:w-80 bg-[var(--card)] border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
                     <h3 className="font-semibold text-sm">Enviar al chat</h3>
                     <button onClick={onClose} className="p-1 text-white/40 hover:text-white"><XMarkIcon className="w-5 h-5" /></button>
@@ -147,13 +147,13 @@ export default function ShareToChatModal({ user, shareType, shareData, onClose }
                         return (
                             <button key={c.id} onClick={() => toggleSelect(c.id)}
                                 className={clsx("w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition", isSelected && "bg-white/8")}>
-                                <div className="relative w-9 h-9 rounded-full bg-neutral-700 border border-white/10 flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                                <div className="relative w-9 h-9 rounded-full bg-[var(--bg3)] border border-white/10 flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
                                     {avatar
                                         ? <img src={avatar} alt="" className="w-full h-full object-cover" />
                                         : (name[0]?.toUpperCase() || "?")}
                                     {isSelected && (
                                         <div className="absolute inset-0 bg-sky-500/90 flex items-center justify-center">
-                                            <CheckIcon className="w-4 h-4 text-white" />
+                                            <CheckIcon className="w-4 h-4 text-[#fff]" />
                                         </div>
                                     )}
                                 </div>
@@ -166,7 +166,7 @@ export default function ShareToChatModal({ user, shareType, shareData, onClose }
                 {/* Send button */}
                 <div className="px-4 py-3 border-t border-white/8">
                     <button onClick={handleSend} disabled={selected.size === 0 || sending || sent}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm bg-white text-black rounded-xl font-medium disabled:opacity-40 transition">
+                        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm bg-[var(--text)] text-[var(--bg)] rounded-xl font-medium disabled:opacity-40 transition">
                         {sent ? (
                             <><CheckIcon className="w-4 h-4" /> Enviado</>
                         ) : sending ? (

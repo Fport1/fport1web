@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { useParams, useRouter } from 'next/navigation'
 import {
   collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc,
@@ -486,7 +487,7 @@ function Versiones({ p, owner, github, setAviso, versiones, proyectoId }) {
         <div key={v.id} className="pe-version">
           <div>
             <strong>{v.name || v.versionNumber}</strong>
-            <p className="pe-pista">{v.channel} · {(v.loaders || []).join(', ')} · {(v.gameVersions || []).join(', ')} · ⬇ {v.downloads || 0}</p>
+            <p className="pe-pista">{v.channel} · {(v.loaders || []).join(', ')} · {(v.gameVersions || []).join(', ')} · <ArrowDownTrayIcon className="ico" aria-hidden="true" /> {v.downloads || 0}</p>
           </div>
           <button className="pe-mini pe-peligro" onClick={() => quitar(v)}>Borrar</button>
         </div>
@@ -511,10 +512,10 @@ const estilos = `
   .pe-acciones { display:flex; gap:10px; align-items:center; }
   .pe-titulo { font-family:'Rajdhani',sans-serif; font-size:32px; font-weight:700; margin:0 0 4px; }
   .pe-sub { color:var(--muted); font-size:13px; margin:0 0 16px; }
-  .pe-pendiente { color:#fbbf24; }
+  .pe-pendiente { color:var(--warn); }
   .pe-mensaje { font-size:13px; border-radius:9px; padding:10px 14px; margin:0 0 16px; }
-  .pe-ok { background:rgba(74,222,128,.1); color:#4ade80; }
-  .pe-error { background:rgba(239,68,68,.1); color:#f87171; }
+  .pe-ok { background:rgba(74,222,128,.1); color:var(--ok); }
+  .pe-error { background:rgba(239,68,68,.1); color:var(--err); }
   .pe-pestanas { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
   .pe-pestana { background:none; border:none; color:var(--muted); font-size:14px; padding:10px 16px;
     cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
@@ -546,7 +547,7 @@ const estilos = `
     font-size:12px; color:var(--sub); cursor:pointer; }
   .pe-mini:hover:not(:disabled) { border-color:var(--accent); color:var(--text); }
   .pe-mini:disabled { opacity:.4; cursor:not-allowed; }
-  .pe-peligro:hover { border-color:rgba(239,68,68,.5); color:#f87171; }
+  .pe-peligro:hover { border-color:rgba(239,68,68,.5); color:var(--err); }
   .pe-previa-icono { width:72px; height:72px; border-radius:12px; object-fit:cover; display:block; margin-bottom:8px; border:1px solid var(--border); }
   .pe-previa-banner { width:100%; aspect-ratio:4/1; object-fit:cover; border-radius:10px; display:block; margin-bottom:8px; border:1px solid var(--border); }
   .pe-galeria { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
@@ -554,7 +555,7 @@ const estilos = `
   .pe-galeria-item img { width:140px; aspect-ratio:16/9; object-fit:cover; border-radius:8px; flex-shrink:0; }
   .pe-galeria-campos { flex:1; display:flex; flex-direction:column; gap:7px; min-width:0; }
   .pe-galeria-botones { display:flex; gap:6px; flex-wrap:wrap; }
-  .pe-destacada { font-size:11px; color:#fbbf24; font-weight:700; }
+  .pe-destacada { font-size:11px; color:var(--warn); font-weight:700; }
   .pe-version { display:flex; justify-content:space-between; align-items:center; gap:12px;
     background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
   .pe-version strong { font-size:14px; }

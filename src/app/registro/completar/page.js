@@ -16,7 +16,7 @@ import {
 const S = `@keyframes spin { to { transform:rotate(360deg) } }`
 
 function TinySpinner() {
-  return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid #facc15', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
+  return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid var(--warn)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
 }
 
 const borderColor = { idle:'var(--border)', ok:'rgba(74,222,128,.5)', error:'rgba(239,68,68,.6)', checking:'rgba(250,204,21,.5)' }
@@ -131,7 +131,7 @@ function CompletarForm() {
               value={form.profileName} onChange={e => up('profileName', e.target.value)}
               onBlur={() => touch('profileName')} maxLength={DISPLAY_NAME_MAX}
               style={inputStyle(touched.profileName && !profileOk ? 'error' : 'idle')} />
-            {touched.profileName && !profileOk && <span style={{ fontSize:12, color:'#f87171' }}>Mínimo 2 caracteres.</span>}
+            {touched.profileName && !profileOk && <span style={{ fontSize:12, color:'var(--err)' }}>Mínimo 2 caracteres.</span>}
           </Field>
 
           <Field label="Usuario">
@@ -142,15 +142,15 @@ function CompletarForm() {
                 onBlur={() => touch('handle')} maxLength={USERNAME_MAX}
                 style={{ ...inputStyle(handleState()), flex:1 }} />
             </div>
-            {handleStatus === 'checking' && <span style={{ fontSize:12, color:'#facc15' }}><TinySpinner />Comprobando…</span>}
-            {handleStatus === 'available' && handleSynOk && <span style={{ fontSize:12, color:'#4ade80' }}>Disponible ✓</span>}
-            {handleStatus === 'taken' && <span style={{ fontSize:12, color:'#f87171' }}>Ese usuario ya está en uso.</span>}
-            {touched.handle && !handleSynOk && handleCheck.msg && <span style={{ fontSize:12, color:'#f87171' }}>{handleCheck.msg}</span>}
+            {handleStatus === 'checking' && <span style={{ fontSize:12, color:'var(--warn)' }}><TinySpinner />Comprobando…</span>}
+            {handleStatus === 'available' && handleSynOk && <span style={{ fontSize:12, color:'var(--ok)' }}>Disponible ✓</span>}
+            {handleStatus === 'taken' && <span style={{ fontSize:12, color:'var(--err)' }}>Ese usuario ya está en uso.</span>}
+            {touched.handle && !handleSynOk && handleCheck.msg && <span style={{ fontSize:12, color:'var(--err)' }}>{handleCheck.msg}</span>}
             <span style={{ fontSize:12, color:'var(--muted)' }}>Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</span>
           </Field>
 
           {serverError && (
-            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:8, padding:'10px 14px', color:'#f87171', fontSize:13 }}>
+            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:8, padding:'10px 14px', color:'var(--err)', fontSize:13 }}>
               {serverError}
             </div>
           )}

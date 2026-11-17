@@ -112,7 +112,7 @@ export default function Nav() {
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
       backdropFilter: 'blur(14px)',
-      background: 'rgba(9,9,11,.8)',
+      background: 'var(--nav-bg)',
       borderBottom: '1px solid var(--border)',
     }}>
       <div style={{
@@ -148,6 +148,7 @@ export default function Nav() {
           )}
 
           <Link href="/#launcher" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>Launcher</Link>
+          <Link href="/faisp" style={{ color: 'var(--sub)', fontSize: 14, textDecoration: 'none' }}>faisp</Link>
 
           {!loading && !switching && (
             user ? (
@@ -171,7 +172,7 @@ export default function Nav() {
                         position: 'absolute', top: -3, right: -3,
                         width: 8, height: 8, borderRadius: '50%',
                         background: 'var(--accent)',
-                        border: '1.5px solid rgba(9,9,11,.8)',
+                        border: '1.5px solid var(--nav-bg)',
                       }} />
                     )}
                   </div>
@@ -187,7 +188,7 @@ export default function Nav() {
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
                     background: 'var(--card)', border: '1px solid var(--border)',
                     borderRadius: 10, padding: 4, minWidth: 200,
-                    boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+                    boxShadow: '0 8px 32px var(--shadow)',
                     animation: 'dropdownIn .12s ease',
                   }}>
 
@@ -198,7 +199,7 @@ export default function Nav() {
                         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</p>
                         {profile?.username && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>@{profile.username.replace(/^@/, '')}</p>}
                       </div>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--ok)' }}><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
 
                     {/* Other saved accounts */}
@@ -219,7 +220,7 @@ export default function Nav() {
                             <span
                               onClick={e => removeAccount(acc.uid, e)}
                               style={{ fontSize: 11, color: 'var(--muted)', padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
-                              onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--err)' }}
                               onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)' }}
                             >✕</span>
                           </button>
@@ -292,7 +293,7 @@ export default function Nav() {
                     <button
                       onClick={() => { setOpen(false); signOut() }}
                       style={itemStyle}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,.1)'; e.currentTarget.style.color = '#f87171' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,.1)'; e.currentTarget.style.color = 'var(--err)' }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sub)' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

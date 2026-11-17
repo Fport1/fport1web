@@ -1102,7 +1102,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
             return (
                 <button
                     type="button"
-                    className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-400 cursor-pointer"
+                    className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-white tema-oscuro transition hover:bg-red-400 cursor-pointer"
                     title="No se envió. Toca para reintentar"
                     aria-label="No se envió. Toca para reintentar"
                     onClick={() => setShowError((v) => !v)}
@@ -1128,7 +1128,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
             {selectMode && (
                 <div className={`flex items-center ${mine ? "order-last ml-2" : "mr-2"}`}>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${selected ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"}`}>
-                        {selected && <CheckIcon className="w-3 h-3 text-white" />}
+                        {selected && <CheckIcon className="w-3 h-3 text-[#fff]" />}
                     </div>
                 </div>
             )}
@@ -1140,7 +1140,7 @@ function Bubble({ mine, children, time, msgId, msgType, convoId, db, userUid, re
                     /* Un mensaje que no salió se pinta en rojo, no en el azul de los
                        enviados: de un vistazo se distingue lo que sí llegó. */
                     className={`relative group inline-flex flex-col whitespace-pre-wrap ${mine
-                        ? (status === "error" ? "bg-red-700 text-white ml-auto" : "bg-[var(--accent)] text-white ml-auto")
+                        ? (status === "error" ? "bg-red-700 text-white tema-oscuro ml-auto" : "bg-[var(--accent)] text-white tema-oscuro ml-auto")
                         : "bg-[var(--bg3)] text-[var(--text)] mr-auto"
                         } w-fit text-[14px] leading-5 ${selected ? "ring-2 ring-[var(--accent2)]" : ""} chat-slide-in`}
                     onDoubleClick={handleDoubleClick}
@@ -1741,7 +1741,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping, onRecording }) {
                                 }}
                                 className={clsx(
                                     "h-8 px-3 inline-flex items-center gap-1.5 rounded-full border text-xs font-medium transition cursor-pointer",
-                                    viewOnce ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "bg-white/8 border-white/10 hover:bg-white/12 text-white/70"
+                                    viewOnce ? "bg-[var(--accent)] text-white tema-oscuro border-[var(--accent)]" : "bg-white/8 border-white/10 hover:bg-white/12 text-white/70"
                                 )}
                                 title="Enviar para ver una sola vez"
                                 aria-pressed={viewOnce}
@@ -1774,7 +1774,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping, onRecording }) {
                                 />
                                 <button
                                     onClick={() => removePending(img.id)}
-                                    className="absolute top-1 right-1 h-6 w-6 grid place-content-center rounded-full bg-black/70 border border-white/15 hover:bg-black text-white/90 cursor-pointer transition"
+                                    className="absolute top-1 right-1 h-6 w-6 grid place-content-center rounded-full bg-black/70 border border-white/15 hover:bg-black text-[#fff]/90 cursor-pointer transition"
                                     title="Quitar"
                                     aria-label="Quitar imagen"
                                 >
@@ -1798,7 +1798,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping, onRecording }) {
                         <button
                             type="button"
                             onClick={() => sendPendingImages(viewOnce)}
-                            className="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-medium cursor-pointer transition active:scale-95"
+                            className="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white tema-oscuro text-sm font-medium cursor-pointer transition active:scale-95"
                             title="Enviar"
                         >
                             Enviar
@@ -1939,7 +1939,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping, onRecording }) {
                                 onClick={() => setRecVO(v => !v)}
                                 className={clsx(
                                     "w-9 h-9 grid place-content-center rounded-full border transition cursor-pointer shrink-0",
-                                    recVO ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "bg-white/8 border-white/10 hover:bg-white/12 text-white/70"
+                                    recVO ? "bg-[var(--accent)] text-white tema-oscuro border-[var(--accent)]" : "bg-white/8 border-white/10 hover:bg-white/12 text-white/70"
                                 )}
                                 title={recVO ? "Escuchar una vez: activado" : "Escuchar una sola vez"}
                                 aria-pressed={recVO}
@@ -1958,7 +1958,7 @@ function ChatComposer({ disabled, onSend, draftKey, onTyping, onRecording }) {
                             <button
                                 type="button"
                                 onClick={() => finishRecording(false)}
-                                className="w-9 h-9 grid place-content-center rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white cursor-pointer transition active:scale-90"
+                                className="w-9 h-9 grid place-content-center rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white tema-oscuro cursor-pointer transition active:scale-90"
                                 title="Enviar audio"
                                 aria-label="Enviar audio"
                             >
@@ -2126,7 +2126,7 @@ function ConfirmDialog({ title, message, confirmLabel = "Aceptar", cancelLabel =
                     <button onClick={() => onResolve(false)}
                         className="px-4 py-2 rounded-xl text-sm hover:bg-white/10 cursor-pointer transition">{cancelLabel}</button>
                     <button onClick={() => onResolve(true)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition ${danger ? "bg-red-600 hover:bg-red-500 text-white" : "bg-[var(--accent)] hover:bg-[var(--accent)] text-white"}`}>
+                        className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition ${danger ? "bg-red-600 hover:bg-red-500 text-white tema-oscuro tema-oscuro" : "bg-[var(--accent)] hover:bg-[var(--accent)] text-white tema-oscuro"}`}>
                         {confirmLabel}
                     </button>
                 </div>
@@ -2149,7 +2149,7 @@ function Toggle({ checked, onChange }) {
             )}
         >
             <span className={clsx(
-                "inline-block h-5 w-5 transform rounded-full bg-white shadow transition",
+                "inline-block h-5 w-5 transform rounded-full bg-[#fff] shadow transition",
                 checked ? "translate-x-5" : "translate-x-0.5"
             )} />
         </button>
@@ -2309,7 +2309,7 @@ function ContactInfoModal({ otherUser, otherUid, conv, muted, blocked, disappear
                     <div className="flex flex-wrap gap-1.5">
                         {DISAPPEAR_OPTIONS.map(o => (
                             <button key={o.secs} onClick={() => onSetDisappearing(o.secs)}
-                                className={`px-3 py-1.5 rounded-full text-xs border cursor-pointer transition ${(disappearingSecs || 0) === o.secs ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "border-white/10 hover:bg-white/10"}`}>
+                                className={`px-3 py-1.5 rounded-full text-xs border cursor-pointer transition ${(disappearingSecs || 0) === o.secs ? "bg-[var(--accent)] text-white tema-oscuro border-[var(--accent)]" : "border-white/10 hover:bg-white/10"}`}>
                                 {o.label}
                             </button>
                         ))}
@@ -2362,7 +2362,7 @@ function ListEditorModal({ list, convos, userMap, userUid, onClose, onSave, onDe
     return (
         <div className="fixed inset-0 z-[70]">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(460px,94vw)] max-h-[85vh] flex flex-col rounded-2xl border border-white/10 bg-black overflow-hidden">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(460px,94vw)] max-h-[85vh] flex flex-col rounded-2xl border border-white/10 bg-[var(--card)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <h3 className="font-semibold">{list.id ? "Editar lista" : "Nueva lista"}</h3>
                     <button onClick={onClose} className="text-sm text-white/50 hover:text-white cursor-pointer">Cerrar</button>
@@ -2404,7 +2404,7 @@ function ListEditorModal({ list, convos, userMap, userUid, onClose, onSave, onDe
                                     </div>
                                     <span className="flex-1 truncate text-sm">{o.name}{o.isGroup ? <span className="text-white/40"> · grupo</span> : ""}</span>
                                     <span className={`w-5 h-5 rounded-full border-2 grid place-content-center ${sel ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"}`}>
-                                        {sel && <CheckIcon className="w-3 h-3 text-white" />}
+                                        {sel && <CheckIcon className="w-3 h-3 text-[#fff]" />}
                                     </span>
                                 </button>
                             );
@@ -2443,7 +2443,7 @@ function ChatSettingsModal({ readReceipts, onToggleReadReceipts, onClose }) {
     return (
         <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(440px,92vw)] rounded-2xl border border-white/10 bg-black overflow-hidden">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(440px,92vw)] rounded-2xl border border-white/10 bg-[var(--card)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <h3 className="font-semibold">Ajustes de chat</h3>
                     <button onClick={onClose} className="text-sm text-white/50 hover:text-white cursor-pointer transition">Cerrar</button>
@@ -2470,7 +2470,7 @@ function ChatSettingsModal({ readReceipts, onToggleReadReceipts, onClose }) {
                             </p>
                         </div>
                         {notifPerm === "granted" ? (
-                            <span className="shrink-0 text-xs text-[#4ade80] mt-1">Activadas ✓</span>
+                            <span className="shrink-0 text-xs text-[var(--ok)] mt-1">Activadas ✓</span>
                         ) : notifPerm === "unsupported" ? (
                             <span className="shrink-0 text-xs text-white/40 mt-1">No disponible</span>
                         ) : (
@@ -2538,7 +2538,7 @@ function GroupMembersModal({ open, conv, userUid, db, onClose }) {
     return (
         <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(480px,92vw)] max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-black">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(480px,92vw)] max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-[var(--card)]">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <div>
                         <h3 className="font-semibold">{conv?.groupName || "Grupo"}</h3>
@@ -2649,7 +2649,7 @@ function GroupSettingsModal({ open, conv, userUid, db, storage: st, onClose }) {
     return (
         <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] rounded-2xl border border-white/10 bg-black overflow-hidden">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(420px,92vw)] rounded-2xl border border-white/10 bg-[var(--card)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <h3 className="font-semibold">Ajustes del grupo</h3>
                     <button onClick={onClose} className="text-sm text-white/50 hover:text-white cursor-pointer transition">Cerrar</button>
@@ -2665,7 +2665,7 @@ function GroupSettingsModal({ open, conv, userUid, db, storage: st, onClose }) {
                             </div>
                             {isAdmin && (
                                 <label className="absolute inset-0 grid place-content-center rounded-full bg-black/50 opacity-0 hover:opacity-100 transition cursor-pointer">
-                                    <CameraIcon className="w-7 h-7 text-white" />
+                                    <CameraIcon className="w-7 h-7 text-[#fff]" />
                                     <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg" className="hidden"
                                         onChange={async (e) => {
                                             const f = e.target.files?.[0];
@@ -4341,7 +4341,7 @@ function MensajesPageContent() {
                             className={`relative px-3 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${inboxView === "requests" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}>
                             Solicitudes
                             {requestConvos.length > 0 && (
-                                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[var(--accent)] text-white text-[10px] font-bold px-1">
+                                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[var(--accent)] text-white tema-oscuro text-[10px] font-bold px-1">
                                     {requestConvos.length > 99 ? "99+" : requestConvos.length}
                                 </span>
                             )}
@@ -4427,7 +4427,7 @@ function MensajesPageContent() {
                                             </button>
                                             <div className="flex gap-2 mt-2">
                                                 <button onClick={() => acceptRequest(c)}
-                                                    className="flex-1 text-xs font-semibold rounded-lg bg-[var(--accent)] text-white py-1.5 hover:bg-[var(--accent2)] cursor-pointer">Aceptar</button>
+                                                    className="flex-1 text-xs font-semibold rounded-lg bg-[var(--accent)] text-white tema-oscuro py-1.5 hover:bg-[var(--accent2)] cursor-pointer">Aceptar</button>
                                                 <button onClick={() => rejectRequest(c)}
                                                     className="flex-1 text-xs font-semibold rounded-lg border border-white/15 text-white/70 py-1.5 hover:bg-white/10 cursor-pointer">Rechazar</button>
                                             </div>
@@ -4515,8 +4515,8 @@ function MensajesPageContent() {
                                             return (
                                                 <div className="relative shrink-0">
                                                     <Avatar src={avatar} alt={name} size={46} />
-                                                    {pres?.playing && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#4ade80] border-2 border-[var(--bg2)]" />}
-                                                    {!pres?.playing && pres?.online && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#60a5fa] border-2 border-[var(--bg2)]" />}
+                                                    {pres?.playing && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[var(--ok)] border-2 border-[var(--bg2)]" />}
+                                                    {!pres?.playing && pres?.online && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[var(--info)] border-2 border-[var(--bg2)]" />}
                                                 </div>
                                             );
                                         })()}
@@ -4927,14 +4927,14 @@ function MensajesPageContent() {
                                                                     {uploading && (
                                                                         <div className="absolute inset-0 grid place-content-center rounded-2xl bg-black/30 pointer-events-none">
                                                                             <div className="flex flex-col items-center gap-2">
-                                                                                <ArrowPathIcon className="w-7 h-7 animate-spin text-white drop-shadow" />
-                                                                                <span className="text-[11px] text-white/90 bg-black/50 rounded-full px-2 py-0.5">Subiendo…</span>
+                                                                                <ArrowPathIcon className="w-7 h-7 animate-spin text-[#fff] drop-shadow" />
+                                                                                <span className="text-[11px] text-[#fff]/90 bg-black/50 rounded-full px-2 py-0.5">Subiendo…</span>
                                                                             </div>
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                                 {m.text ? (
-                                                                    <div className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? "bg-[var(--accent)] text-white ml-auto" : "bg-[var(--bg3)] text-[var(--text)] mr-auto"}`}>
+                                                                    <div className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? "bg-[var(--accent)] text-white tema-oscuro ml-auto" : "bg-[var(--bg3)] text-[var(--text)] mr-auto"}`}>
                                                                         <div className="whitespace-pre-wrap break-words">{m.text}</div>
                                                                         <div className="mt-1 text-[11px] opacity-70 leading-none text-right">
                                                                             {(tsToDate(m.at) || new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -4998,7 +4998,7 @@ function MensajesPageContent() {
                                                                         </div>
                                                                     ) : (
                                                                         <div
-                                                                            className={`select-none px-3 py-2 rounded-2xl cursor-pointer ${isSender ? "bg-[var(--accent)] text-white" : "bg-[var(--bg3)] text-[var(--text)]"}`}
+                                                                            className={`select-none px-3 py-2 rounded-2xl cursor-pointer ${isSender ? "bg-[var(--accent)] text-white tema-oscuro" : "bg-[var(--bg3)] text-[var(--text)]"}`}
                                                                             title={isSender ? "Tocar para revisar" : "Tocar para ver una vez"}
                                                                             {...dblReactHandlers(m, () => {
                                                                                 if (isSender) {
@@ -5049,8 +5049,8 @@ function MensajesPageContent() {
                                                                         {uploading && (
                                                                             <div className="absolute inset-0 grid place-content-center rounded-2xl bg-black/30">
                                                                                 <div className="flex flex-col items-center gap-2">
-                                                                                    <ArrowPathIcon className="w-7 h-7 animate-spin text-white drop-shadow" />
-                                                                                    <span className="text-[11px] text-white/90 bg-black/50 rounded-full px-2 py-0.5">Subiendo…</span>
+                                                                                    <ArrowPathIcon className="w-7 h-7 animate-spin text-[#fff] drop-shadow" />
+                                                                                    <span className="text-[11px] text-[#fff]/90 bg-black/50 rounded-full px-2 py-0.5">Subiendo…</span>
                                                                                 </div>
                                                                             </div>
                                                                         )}
@@ -5059,7 +5059,7 @@ function MensajesPageContent() {
                                                                         <div className={clsx("absolute top-2 right-2", uploading && "hidden")}>
                                                                             <button
                                                                                 type="button"
-                                                                                className="h-8 w-8 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center cursor-pointer"
+                                                                                className="h-8 w-8 rounded-full bg-black/60 text-[#fff] hover:bg-black/80 flex items-center justify-center cursor-pointer"
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     if (imgMenu.open) {
@@ -5079,7 +5079,7 @@ function MensajesPageContent() {
                                                                     {/* pie: caption + hora (solo si el usuario escribió algo) */}
                                                                     {m.text ? (
                                                                         <div
-                                                                            className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? "bg-[var(--accent)] text-white ml-auto" : "bg-[var(--bg3)] text-[var(--text)] mr-auto"
+                                                                            className={`mt-1 px-3 py-2 rounded-2xl text-sm ${isSender ? "bg-[var(--accent)] text-white tema-oscuro ml-auto" : "bg-[var(--bg3)] text-[var(--text)] mr-auto"
                                                                                 }`}
                                                                         >
                                                                             <div className="whitespace-pre-wrap break-words">
@@ -5130,7 +5130,7 @@ function MensajesPageContent() {
                                                                 {isMine && showAudioMenu && <MenuBtn />}
                                                                 <div className="flex flex-col">
                                                                 <div
-                                                                    className={`px-3 py-2 rounded-2xl select-none ${isMine ? "bg-[var(--accent)] text-white" : "bg-[var(--bg3)] text-[var(--text)]"}`}
+                                                                    className={`px-3 py-2 rounded-2xl select-none ${isMine ? "bg-[var(--accent)] text-white tema-oscuro" : "bg-[var(--bg3)] text-[var(--text)]"}`}
                                                                     onDoubleClick={(e) => { if (!uploading) { spawnHeartAt(e.clientX, e.clientY); toggleMsgReaction(m, "heart"); } }}
                                                                 >
                                                                     {uploading ? (

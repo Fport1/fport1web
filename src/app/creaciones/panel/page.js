@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -136,7 +137,7 @@ export default function PanelCreaciones() {
               <div className="pn-fila-info">
                 <p className="pn-fila-titulo">{p.title}</p>
                 <p className="pn-fila-meta">
-                  {etiquetaDeTipo(p.type)} · /{p.slug} · ⬇ {(p.downloads || 0).toLocaleString('es-CO')}
+                  {etiquetaDeTipo(p.type)} · /{p.slug} · <ArrowDownTrayIcon className="ico" aria-hidden="true" /> {(p.downloads || 0).toLocaleString('es-CO')}
                 </p>
               </div>
               {p.featured && <span className="pn-marca pn-destacado">★</span>}
@@ -160,10 +161,10 @@ const estilos = `
   .pn-caja { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; }
   .pn-alerta { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
     background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.3); border-radius:12px; padding:14px 18px; margin-bottom:18px; }
-  .pn-alerta strong { color:#fbbf24; font-size:14px; }
+  .pn-alerta strong { color:var(--warn); font-size:14px; }
   .pn-alerta p { color:var(--sub); font-size:13px; margin:3px 0 0; }
   .pn-alerta .pn-boton { margin-left:auto; }
-  .pn-conectado { font-size:13px; color:#4ade80; margin:0 0 18px; }
+  .pn-conectado { font-size:13px; color:var(--ok); margin:0 0 18px; }
   .pn-conectado strong { color:var(--text); }
   .pn-nuevo { display:flex; gap:10px; margin-bottom:6px; }
   .pn-input { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:10px;
@@ -175,7 +176,7 @@ const estilos = `
   .pn-boton:disabled { opacity:.5; cursor:not-allowed; }
   .pn-pista { font-size:12px; color:var(--muted); margin:0 0 16px; }
   .pn-pista strong { color:var(--accent2); }
-  .pn-error { font-size:13px; color:#f87171; margin:0 0 16px; }
+  .pn-error { font-size:13px; color:var(--err); margin:0 0 16px; }
   .pn-lista { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
   .pn-fila { display:flex; align-items:center; gap:14px; padding:14px 16px; text-decoration:none; color:inherit;
     background:var(--card); border:1px solid var(--border); border-radius:12px; transition:border-color .2s; }
@@ -186,9 +187,9 @@ const estilos = `
   .pn-fila-titulo { font-size:15px; font-weight:600; margin:0; }
   .pn-fila-meta { font-size:12px; color:var(--muted); margin:2px 0 0; }
   .pn-marca { font-size:11px; font-weight:700; border-radius:999px; padding:4px 10px; flex-shrink:0; }
-  .pn-publicado { background:rgba(74,222,128,.12); color:#4ade80; }
+  .pn-publicado { background:rgba(74,222,128,.12); color:var(--ok); }
   .pn-borrador { background:var(--bg3); color:var(--muted); }
-  .pn-destacado { background:rgba(251,191,36,.12); color:#fbbf24; }
+  .pn-destacado { background:rgba(251,191,36,.12); color:var(--warn); }
   .pn-aviso { color:var(--muted); font-size:14px; text-align:center; padding:40px 0; }
   .pn-enlace { color:var(--accent2); font-size:13px; text-decoration:none; }
   .pn-enlace:hover { text-decoration:underline; }

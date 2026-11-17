@@ -100,7 +100,7 @@ function LoginForm() {
           </div>
           {error && (
             <div>
-              <p style={{ color: '#f87171', fontSize: 13 }}>{error}</p>
+              <p style={{ color: 'var(--err)', fontSize: 13 }}>{error}</p>
               {error.includes('incorrectos') && (
                 <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
                   Si te registraste con Google, usa el botón de arriba.
@@ -108,7 +108,7 @@ function LoginForm() {
               )}
             </div>
           )}
-          {resetSent && <p style={{ color: '#4ade80', fontSize: 13 }}>Email de recuperación enviado. Revisa tu bandeja.</p>}
+          {resetSent && <p style={{ color: 'var(--ok)', fontSize: 13 }}>Email de recuperación enviado. Revisa tu bandeja.</p>}
           <button type="submit" disabled={loading} className="auth-submit-btn">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>

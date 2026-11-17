@@ -21,7 +21,7 @@ const S = `
   .btn-primary:hover:not(:disabled){filter:brightness(1.1);}
   .btn-primary:active:not(:disabled){transform:scale(.98);}
   .btn-primary{transition:filter .15s,transform .1s;}
-  .btn-google:hover:not(:disabled){background:#1c1c28!important;border-color:#3f3f52!important;}
+  .btn-google:hover:not(:disabled){background:var(--card)!important;border-color:var(--accent)!important;}
   .btn-google{transition:background .15s,border-color .15s;}
 `
 
@@ -36,7 +36,7 @@ function Spinner({ size = 20, color = '#a855f7' }) {
 }
 
 function TinySpinner() {
-  return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid #facc15', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
+  return <span style={{ display:'inline-block', width:10, height:10, verticalAlign:'middle', border:'1.5px solid var(--warn)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .7s linear infinite', marginRight:4 }} />
 }
 
 function GoogleLogo() {
@@ -122,7 +122,7 @@ function ProfileForm({ user, onDone }) {
           value={form.profileName} onChange={e=>up('profileName',e.target.value)}
           onBlur={()=>touch('profileName')} maxLength={DISPLAY_NAME_MAX}
           style={inp(touched.profileName&&!profileOk?'error':'idle')} />
-        {touched.profileName&&!profileOk && <span style={{fontSize:12,color:'#f87171'}}>Mínimo 2 caracteres.</span>}
+        {touched.profileName&&!profileOk && <span style={{fontSize:12,color:'var(--err)'}}>Mínimo 2 caracteres.</span>}
       </Field>
       <Field label="Usuario">
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -132,13 +132,13 @@ function ProfileForm({ user, onDone }) {
             onBlur={()=>touch('handle')} maxLength={USERNAME_MAX}
             style={{...inp(hState()),flex:1}} />
         </div>
-        {handleStatus==='checking' && <span style={{fontSize:12,color:'#facc15'}}><TinySpinner/>Comprobando…</span>}
-        {handleStatus==='available'&&hc.ok && <span style={{fontSize:12,color:'#4ade80'}}>Disponible ✓</span>}
-        {handleStatus==='taken' && <span style={{fontSize:12,color:'#f87171'}}>Ese usuario ya está en uso.</span>}
-        {touched.handle&&!hc.ok&&hc.msg && <span style={{fontSize:12,color:'#f87171'}}>{hc.msg}</span>}
+        {handleStatus==='checking' && <span style={{fontSize:12,color:'var(--warn)'}}><TinySpinner/>Comprobando…</span>}
+        {handleStatus==='available'&&hc.ok && <span style={{fontSize:12,color:'var(--ok)'}}>Disponible ✓</span>}
+        {handleStatus==='taken' && <span style={{fontSize:12,color:'var(--err)'}}>Ese usuario ya está en uso.</span>}
+        {touched.handle&&!hc.ok&&hc.msg && <span style={{fontSize:12,color:'var(--err)'}}>{hc.msg}</span>}
         <span style={{fontSize:12,color:'var(--muted)'}}>Solo minúsculas, números, - y _. {USERNAME_MIN}–{USERNAME_MAX} caracteres.</span>
       </Field>
-      {err && <div style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',color:'#f87171',fontSize:13}}>{err}</div>}
+      {err && <div style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',color:'var(--err)',fontSize:13}}>{err}</div>}
       <button type="submit" disabled={!canSubmit} className="btn-primary" style={{
         padding:'12px', borderRadius:10, border:'none', fontSize:14, fontWeight:600,
         cursor:canSubmit?'pointer':'not-allowed',
@@ -247,7 +247,7 @@ function LauncherAuthInner() {
     return (
       <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'var(--bg)' }}>
         <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--ok)' }}><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <p style={{ fontSize:16, fontWeight:600, color:'var(--text)', margin:0 }}>¡Conectado al launcher!</p>
         <p style={{ fontSize:13, color:'var(--sub)', margin:0, textAlign:'center', maxWidth:280 }}>
@@ -264,7 +264,7 @@ function LauncherAuthInner() {
         <div style={{ width:'100%', maxWidth:400 }}>
           <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.12em', color:'var(--accent)', textTransform:'uppercase', margin:'0 0 6px' }}>fport1-social</p>
           <h1 style={{ fontSize:22, fontWeight:700, margin:'0 0 16px', color:'var(--text)' }}>Conectar con Google</h1>
-          <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'12px 16px', color:'#f87171', fontSize:13, marginBottom:18 }}>
+          <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'12px 16px', color:'var(--err)', fontSize:13, marginBottom:18 }}>
             {error}
           </div>
           <button onClick={handleGoogle} className="btn-google" style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'13px', border:'1px solid var(--border)', borderRadius:12, background:'var(--card)', color:'var(--text)', fontSize:14, fontWeight:500, cursor:'pointer' }}>

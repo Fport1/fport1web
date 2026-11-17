@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { TIPOS, CATEGORIAS, etiquetaDeTipo } from '@/lib/catalogo'
@@ -29,7 +30,7 @@ function Tarjeta({ p }) {
         <div className="cr-metadatos">
           {(p.loaders || []).slice(0, 3).map(l => <span key={l} className="cr-chip">{l}</span>)}
           {(p.gameVersions || []).slice(0, 2).map(v => <span key={v} className="cr-chip">{v}</span>)}
-          <span className="cr-descargas">⬇ {(p.downloads || 0).toLocaleString('es-CO')}</span>
+          <span className="cr-descargas"><ArrowDownTrayIcon className="ico" aria-hidden="true" /> {(p.downloads || 0).toLocaleString('es-CO')}</span>
         </div>
       </div>
     </Link>
@@ -168,7 +169,7 @@ export default function CreacionesPage() {
         .cr-tarjeta:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 28px rgba(124,58,237,.14); }
         .cr-destacado {
           position:absolute; top:10px; right:12px; font-size:10px; font-weight:700;
-          letter-spacing:.06em; color:#fbbf24;
+          letter-spacing:.06em; color:var(--warn);
         }
         .cr-icono { border-radius:12px; object-fit:cover; flex-shrink:0; border:1px solid var(--border); }
         .cr-icono-vacio { display:flex; align-items:center; justify-content:center; background:var(--bg3); font-size:22px; font-weight:700; color:var(--muted); }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
-import { XMarkIcon, FlagIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, FlagIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
 const REASONS = [
     { value: "spam", label: "Spam o publicidad" },
@@ -52,7 +52,7 @@ export default function ReportModal({ type, targetId, targetTitle, onClose }) {
             onClick={onClose}
         >
             <div
-                className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+                className="bg-[var(--card)] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">
@@ -67,7 +67,7 @@ export default function ReportModal({ type, targetId, targetTitle, onClose }) {
 
                 {done ? (
                     <div className="text-center py-4">
-                        <div className="text-4xl mb-3">✅</div>
+                        <CheckCircleIcon className="w-10 h-10 mx-auto mb-3 text-[var(--ok)]" aria-hidden="true" />
                         <p className="text-white/80 text-sm mb-4">
                             Reporte enviado. Nuestro equipo lo revisará pronto.
                         </p>

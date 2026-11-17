@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { db } from '@/lib/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
 import Link from 'next/link'
+import { CubeIcon, PlayIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { resolvePresence } from '@/lib/presence'
 
 export default function FriendProfilePage({ params }) {
@@ -73,15 +74,17 @@ export default function FriendProfilePage({ params }) {
         <h1 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{displayName}</h1>
         {profile.usernameSlug && <p style={{ fontSize: 13, color: 'var(--accent2)', marginBottom: 4 }}>@{profile.usernameSlug}</p>}
         {profile.minecraftUsername && (
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>⛏ {profile.minecraftUsername}</p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}><CubeIcon className="ico" aria-hidden="true" /> {profile.minecraftUsername}</p>
         )}
 
-        <p style={{ fontSize: 13, marginBottom: 24, color: isPlaying ? '#4ade80' : isOnline ? '#60a5fa' : 'var(--muted)' }}>
-          {isPlaying ? '🎮 Jugando ahora mismo' : isOnline ? '🟢 En línea' : '⚫ Desconectado'}
+        <p style={{ fontSize: 13, marginBottom: 24, color: isPlaying ? 'var(--ok)' : isOnline ? 'var(--info)' : 'var(--muted)' }}>
+          {isPlaying
+            ? <><PlayIcon className="ico" aria-hidden="true" /> Jugando ahora mismo</>
+            : <><span className="dot" aria-hidden="true" /> {isOnline ? 'En línea' : 'Desconectado'}</>}
         </p>
 
         <button onClick={addInLauncher} style={{ width: '100%', padding: '14px', borderRadius: 12, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer', marginBottom: 12, boxShadow: '0 0 20px rgba(124,58,237,.3)' }}>
-          ➕ Añadir como amigo en el Launcher
+          <UserPlusIcon className="ico" aria-hidden="true" /> Añadir como amigo en el Launcher
         </button>
 
         <Link href="/#descargar" style={{ display: 'block', padding: '12px', borderRadius: 12, border: '1px solid var(--border)', color: 'var(--sub)', fontSize: 13, textDecoration: 'none' }}>

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 import { descripcionAHtml } from '@/lib/descripcionCreaciones'
+import { LinkIcon, PhotoIcon } from '@heroicons/react/24/outline'
 
 // Cómo se inserta una imagen. Son las cuatro formas que entiende la ficha, y
 // las mismas que usa el launcher: si aquí se escribe otra cosa, allí no se verá.
@@ -28,7 +29,7 @@ const BOTONES = [
   { id: 'ol', titulo: 'Lista numerada', texto: '1.', envoltura: ['1. ', ''], linea: true },
   { id: 'quote', titulo: 'Cita', texto: '❝', envoltura: ['> ', ''], linea: true },
   { id: 'code', titulo: 'Código', texto: '</>', envoltura: ['`', '`'] },
-  { id: 'link', titulo: 'Enlace', texto: '🔗', envoltura: ['[', '](https://)'] },
+  { id: 'link', titulo: 'Enlace', texto: <LinkIcon width={15} height={15} aria-hidden="true" />, envoltura: ['[', '](https://)'] },
   { id: 'table', titulo: 'Tabla', texto: '▦', bloque: '\n| Columna | Columna |\n|---|---|\n| Dato | Dato |\n' },
   { id: 'hr', titulo: 'Separador', texto: '―', bloque: '\n\n---\n\n' },
   { id: 'video', titulo: 'Vídeo de YouTube', texto: '▶', video: true },
@@ -84,7 +85,7 @@ export default function EditorMarkdown({ valor, alCambiar, alPedirImagen }) {
           </button>
         ))}
         {alPedirImagen && (
-          <button type="button" title="Insertar imagen de la galería" className="em-boton" onClick={alPedirImagen}>🖼</button>
+          <button type="button" title="Insertar imagen de la galería" className="em-boton" onClick={alPedirImagen}><PhotoIcon width={15} height={15} aria-hidden="true" /></button>
         )}
         <div className="em-vistas">
           {[['lado', 'Lado a lado'], ['escribir', 'Escribir'], ['ver', 'Vista previa']].map(([id, n]) => (

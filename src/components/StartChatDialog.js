@@ -7,7 +7,7 @@ import {
   collection, query, orderBy, startAt, endAt,
   limit as qLimit, getDocs,
 } from 'firebase/firestore'
-import { XMarkIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, UserGroupIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 function Avatar({ src, name = '', size = 40 }) {
   const [err, setErr] = useState(false)
@@ -172,9 +172,9 @@ export default function StartChatDialog({ open, onClose, onPick, onPickGroup, li
             transition: 'background .15s, border-color .15s',
           }}>
             <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)}
-              style={{ marginTop: 2, accentColor: '#fbbf24', cursor: 'pointer' }} />
+              style={{ marginTop: 2, accentColor: 'var(--warn)', cursor: 'pointer' }} />
             <span style={{ fontSize: 13, lineHeight: 1.5 }}>
-              <span style={{ fontWeight: 700, color: anonymous ? '#fbbf24' : 'var(--text)' }}>🕵️ Grupo anónimo</span>
+              <span style={{ fontWeight: 700, color: anonymous ? 'var(--warn)' : 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><EyeSlashIcon width={16} height={16} aria-hidden="true" />Grupo anónimo</span>
               <br />
               <span style={{ color: 'var(--muted)', fontSize: 12 }}>
                 Nadie puede ver la lista de miembros ni cuántos son. Al escribir sí se ve el nombre.

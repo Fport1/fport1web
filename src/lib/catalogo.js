@@ -38,8 +38,8 @@ export function etiquetaDeCategoria(id) {
 
 /** Cómo se enseña el soporte de cliente/servidor en la ficha. */
 export const SOPORTE = {
-  required: { texto: 'Obligatorio', color: '#4ade80' },
-  optional: { texto: 'Opcional', color: '#fbbf24' },
+  required: { texto: 'Obligatorio', color: 'var(--ok)' },
+  optional: { texto: 'Opcional', color: 'var(--warn)' },
   unsupported: { texto: 'No compatible', color: '#71717a' },
 }
 
